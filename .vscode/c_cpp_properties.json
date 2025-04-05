@@ -1,0 +1,13 @@
+{
+    "configurations": [
+        {
+            "name": "Linux",
+            "intelliSenseMode": "linux-gcc-x64",
+            "compilerPath": "/home/tornikeo/micromamba/envs/pb/bin/nvcc",
+            "cStandard": "${default}",
+            "includePath": ["${workspaceFolder}/**", "/usr/include"],
+            "cppStandard": "gnu++17"
+        }
+    ],
+    "version": 4
+}
