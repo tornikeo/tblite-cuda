@@ -1,92 +1,4 @@
-// type :: adjacency_list
-// !> Offset index in the neighbour map
-// integer, allocatable :: inl(:)
-// !> Number of neighbours for each atom
-// integer, allocatable :: nnl(:)
-// !> Index of the neighbouring atom
-// integer, allocatable :: nlat(:)
-// !> Cell index of the neighbouring atom
-// integer, allocatable :: nltr(:)
-// end type adjacency_list
-
-typedef struct {
-    int *inl;   // Offset index in the neighbour map
-    int *nnl;   // Number of neighbours for each atom
-    int *nlat;  // Index of the neighbouring atom
-    int *nltr;  // Cell index of the neighbouring atom
-} adjacency_list;
-
-
-// !> Structure representation
-// type :: structure_type
-
-//    !> Number of atoms
-//    integer :: nat = 0
-
-//    !> Number of unique species
-//    integer :: nid = 0
-
-//    !> Number of bonds
-//    integer :: nbd = 0
-
-//    !> Species identifier
-//    integer, allocatable :: id(:)
-
-//    !> Atomic number for each species
-//    integer, allocatable :: num(:)
-
-//    !> Element symbol for each species
-//    character(len=symbol_length), allocatable :: sym(:)
-
-//    !> Cartesian coordinates, in Bohr
-//    real(wp), allocatable :: xyz(:, :)
-
-//    !> Number of unpaired electrons
-//    integer :: uhf = 0
-
-//    !> Total charge
-//    real(wp) :: charge = 0.0_wp
-
-//    !> Lattice parameters
-//    real(wp), allocatable :: lattice(:, :)
-
-//    !> Periodic directions
-//    logical, allocatable :: periodic(:)
-
-//    !> Bond indices
-//    integer, allocatable :: bond(:, :)
-
-// end type structure_type
-
-typedef struct {
-    int nat;          // Number of atoms
-    int nid;          // Number of unique species
-    int nbd;          // Number of bonds
-    int *id;          // Species identifier
-    int *num;         // Atomic number for each species
-    char **sym;       // Element symbol for each species
-    double **xyz;     // Cartesian coordinates, in Bohr
-    int uhf;          // Number of unpaired electrons
-    double charge;    // Total charge
-    double **lattice; // Lattice parameters
-    int *periodic;    // Periodic directions (logical)
-    int **bond;       // Bond indices
-} structure_type;
-
-
-// integer, parameter :: maxl = 6
-// integer, parameter :: maxl2 = maxl*2
-// integer, parameter :: msao(0:maxl) = [1, 3, 5, 7, 9, 11, 13]
-// integer, parameter :: mlao(0:maxl) = [1, 3, 6, 10, 15, 21, 28]
-// integer, parameter :: lmap(0:maxl) = [0, 1, 4, 10, 20, 35, 56]
-// real(wp), parameter :: sqrtpi = sqrt(pi)
-// real(wp), parameter :: sqrtpi3 = sqrtpi**3
-
-#define MAXL 6
-#define MAXL2 12 // 2 x MAXL
-#define SQRT_PI 1.77245385091 // Approximation of sqrt(pi)
-#define SQRT_PI3 5.56832799683 // Approximation of sqrt(pi)^3
-
+#include "main.h"
 
 // pure subroutine form_product(a, b, la, lb, d)
 //    integer, intent(in) :: la, lb
@@ -178,18 +90,24 @@ typedef struct {
 
 // end subroutine form_product
 
-__device__ void form_product(const double *a, const double *b, int la, int lb, double *d) {
-    if (la >= 4 || lb >= 4) goto level_40;
-    if (la >= 3 || lb >= 3) goto level_30;
-    if (la >= 2 || lb >= 2) goto level_20;
+__device__ void form_product(const double *a, const double *b, int la, int lb, double *d)
+{
+    if (la >= 4 || lb >= 4)
+        goto level_40;
+    if (la >= 3 || lb >= 3)
+        goto level_30;
+    if (la >= 2 || lb >= 2)
+        goto level_20;
 
     // <s|s> = <s>
     d[0] = a[0] * b[0];
-    if (la == 0 && lb == 0) return;
+    if (la == 0 && lb == 0)
+        return;
 
     // <s|p> = <s|*(|s>+|p>) = <s> + <p>
     d[1] = a[0] * b[1] + a[1] * b[0];
-    if (la == 0 || lb == 0) return;
+    if (la == 0 || lb == 0)
+        return;
 
     // <p|p> = (<s|+<p|)*(|s>+|p>) = <s> + <p> + <d>
     d[2] = a[1] * b[1];
@@ -200,12 +118,14 @@ level_20:
     d[0] = a[0] * b[0];
     d[1] = a[0] * b[1] + a[1] * b[0];
     d[2] = a[0] * b[2] + a[2] * b[0];
-    if (la == 0 || lb == 0) return;
+    if (la == 0 || lb == 0)
+        return;
 
     // <p|d> = (<s|+<p|)*(|s>+|p>+|d>) = <s> + <p> + <d> + <f>
     d[2] += a[1] * b[1];
     d[3] = a[1] * b[2] + a[2] * b[1];
-    if (la <= 1 || lb <= 1) return;
+    if (la <= 1 || lb <= 1)
+        return;
 
     // <d|d> = (<s|+<p|+<d|)*(|s>+|p>+|d>) = <s> + <p> + <d> + <f> + <g>
     d[4] = a[2] * b[2];
@@ -217,18 +137,21 @@ level_30:
     d[1] = a[0] * b[1] + a[1] * b[0];
     d[2] = a[0] * b[2] + a[2] * b[0];
     d[3] = a[0] * b[3] + a[3] * b[0];
-    if (la == 0 || lb == 0) return;
+    if (la == 0 || lb == 0)
+        return;
 
     // <p|f> = (<s|+<p|)*(|s>+|p>+|d>+|f>) = <s> + <p> + <d> + <f> + <g>
     d[2] += a[1] * b[1];
     d[3] += a[1] * b[2] + a[2] * b[1];
     d[4] = a[1] * b[3] + a[3] * b[1];
-    if (la <= 1 || lb <= 1) return;
+    if (la <= 1 || lb <= 1)
+        return;
 
     // <d|f> = (<s|+<p|+<d|)*(|s>+|p>+|d>+|f>) = <s> + <p> + <d> + <f> + <g> + <h>
     d[4] += a[2] * b[2];
     d[5] = a[2] * b[3] + a[3] * b[2];
-    if (la <= 2 || lb <= 2) return;
+    if (la <= 2 || lb <= 2)
+        return;
 
     // <f|f> = (<s|+<p|+<d|+<f|)*(|s>+|p>+|d>+|f>) = <s> + <p> + <d> + <f> + <g> + <h> + <i>
     d[6] = a[3] * b[3];
@@ -241,31 +164,33 @@ level_40:
     d[2] = a[0] * b[2] + a[2] * b[0];
     d[3] = a[0] * b[3] + a[3] * b[0];
     d[4] = a[0] * b[4] + a[4] * b[0];
-    if (la == 0 || lb == 0) return;
+    if (la == 0 || lb == 0)
+        return;
 
     // <p|g> = (<s|+<p|)*(|s>+|p>+|d>+|f>+|g>) = <s> + <p> + <d> + <f> + <g> + <h>
     d[2] += a[1] * b[1];
     d[3] += a[1] * b[2] + a[2] * b[1];
     d[4] += a[1] * b[3] + a[3] * b[1];
     d[5] = a[1] * b[4] + a[4] * b[1];
-    if (la <= 1 || lb <= 1) return;
+    if (la <= 1 || lb <= 1)
+        return;
 
     // <d|g> = (<s|+<p|+<d|)*(|s>+|p>+|d>+|f>+|g>) = <s> + <p> + <d> + <f> + <g> + <h> + <i>
     d[4] += a[2] * b[2];
     d[5] += a[2] * b[3] + a[3] * b[2];
     d[6] = a[2] * b[4] + a[4] * b[2];
-    if (la <= 2 || lb <= 2) return;
+    if (la <= 2 || lb <= 2)
+        return;
 
     // <f|g> = (<s|+<p|+<d|+<f|)*(|s>+|p>+|d>+|f>+|g>) = <s> + <p> + <d> + <f> + <g> + <h> + <i> + <k>
     d[6] += a[3] * b[3];
     d[7] = a[3] * b[4] + a[4] * b[3];
-    if (la <= 3 || lb <= 3) return;
+    if (la <= 3 || lb <= 3)
+        return;
 
     // <g|g> = (<s|+<p|+<d|+<f|+<g|)*(|s>+|p>+|d>+|f>+|g>) = <s> + <p> + <d> + <f> + <g> + <h> + <i> + <k> + <l>
     d[8] = a[4] * b[4];
 }
-
-
 
 // pure subroutine horizontal_shift(ae, l, cfs)
 //    integer, intent(in) :: l
@@ -291,30 +216,302 @@ level_40:
 //    end select
 // end subroutine horizontal_shift
 
-__device__ void horizontal_shift(double ae, int l, double *cfs) {
-    switch (l) {
-        case 0: // s
-            break;
-        case 1: // p
-            cfs[0] += ae * cfs[1];
-            break;
-        case 2: // d
-            cfs[0] += ae * ae * cfs[2];
-            cfs[1] += 2 * ae * cfs[2];
-            break;
-        case 3: // f
-            cfs[0] += ae * ae * ae * cfs[3];
-            cfs[1] += 3 * ae * ae * cfs[3];
-            cfs[2] += 3 * ae * cfs[3];
-            break;
-        case 4: // g
-            cfs[0] += ae * ae * ae * ae * cfs[4];
-            cfs[1] += 4 * ae * ae * ae * cfs[4];
-            cfs[2] += 6 * ae * ae * cfs[4];
-            cfs[3] += 4 * ae * cfs[4];
-            break;
-        default:
-            break;
+__device__ void horizontal_shift(double ae, int l, double *cfs)
+{
+    switch (l)
+    {
+    case 0: // s
+        break;
+    case 1: // p
+        cfs[0] += ae * cfs[1];
+        break;
+    case 2: // d
+        cfs[0] += ae * ae * cfs[2];
+        cfs[1] += 2 * ae * cfs[2];
+        break;
+    case 3: // f
+        cfs[0] += ae * ae * ae * cfs[3];
+        cfs[1] += 3 * ae * ae * cfs[3];
+        cfs[2] += 3 * ae * cfs[3];
+        break;
+    case 4: // g
+        cfs[0] += ae * ae * ae * ae * cfs[4];
+        cfs[1] += 4 * ae * ae * ae * cfs[4];
+        cfs[2] += 6 * ae * ae * cfs[4];
+        cfs[3] += 4 * ae * cfs[4];
+        break;
+    default:
+        break;
     }
 }
 
+// ddi is [3, 3]
+// dqi is [3, 6]
+// ddj is [3, 3]
+// dqj is [3, 6]
+// pure subroutine shift_operator(vec, s, di, qi, ds, ddi, dqi, ddj, dqj)
+//    real(wp),intent(in) :: vec(:)
+//    real(wp),intent(in) :: s
+//    real(wp),intent(in) :: di(:)
+//    real(wp),intent(in) :: qi(:)
+//    real(wp),intent(in) :: ds(:)
+//    real(wp),intent(in) :: ddi(:, :)
+//    real(wp),intent(in) :: dqi(:, :)
+//    real(wp),intent(out) :: ddj(:, :)
+//    real(wp),intent(out) :: dqj(:, :)
+
+//    ddj(:, 1) = ddi(:, 1) - vec(1)*ds
+//    ddj(:, 2) = ddi(:, 2) - vec(2)*ds
+//    ddj(:, 3) = ddi(:, 3) - vec(3)*ds
+//    ddj(1, 1) = ddj(1, 1) - s
+//    ddj(2, 2) = ddj(2, 2) - s
+//    ddj(3, 3) = ddj(3, 3) - s
+
+//    dqj(:, 1) = dqi(:, 1) - 2*vec(1)*ddi(:, 1) + vec(1)**2*ds
+//    dqj(:, 3) = dqi(:, 3) - 2*vec(2)*ddi(:, 2) + vec(2)**2*ds
+//    dqj(:, 6) = dqi(:, 6) - 2*vec(3)*ddi(:, 3) + vec(3)**2*ds
+//    dqj(:, 2) = dqi(:, 2) - vec(1)*ddi(:, 2) - vec(2)*ddi(:, 1) + vec(1)*vec(2)*ds
+//    dqj(:, 4) = dqi(:, 4) - vec(1)*ddi(:, 3) - vec(3)*ddi(:, 1) + vec(1)*vec(3)*ds
+//    dqj(:, 5) = dqi(:, 5) - vec(2)*ddi(:, 3) - vec(3)*ddi(:, 2) + vec(2)*vec(3)*ds
+//    dqj(1, 1) = dqj(1, 1) - 2*di(1) + 2*vec(1)*s
+//    dqj(2, 3) = dqj(2, 3) - 2*di(2) + 2*vec(2)*s
+//    dqj(3, 6) = dqj(3, 6) - 2*di(3) + 2*vec(3)*s
+//    dqj(1, 2) = dqj(1, 2) - di(2) + vec(2)*s
+//    dqj(2, 2) = dqj(2, 2) - di(1) + vec(1)*s
+//    dqj(1, 4) = dqj(1, 4) - di(3) + vec(3)*s
+//    dqj(3, 4) = dqj(3, 4) - di(1) + vec(1)*s
+//    dqj(2, 5) = dqj(2, 5) - di(3) + vec(3)*s
+//    dqj(3, 5) = dqj(3, 5) - di(2) + vec(2)*s
+
+// end subroutine shift_operator
+
+__device__ void shift_operator(const double *vec, double s, const double *di, const double *qi, const double *ds,
+                               const double ddi[3][3], const double dqi[3][6], double ddj[3][3], double dqj[3][6])
+{
+    // Update ddj
+    for (int i = 0; i < 3; i++)
+    {
+        ddj[i][0] = ddi[i][0] - vec[0] * ds[i];
+        ddj[i][1] = ddi[i][1] - vec[1] * ds[i];
+        ddj[i][2] = ddi[i][2] - vec[2] * ds[i];
+    }
+    ddj[0][0] -= s;
+    ddj[1][1] -= s;
+    ddj[2][2] -= s;
+
+    // Update dqj
+    for (int i = 0; i < 3; i++)
+    {
+        dqj[i][0] = dqi[i][0] - 2 * vec[0] * ddi[i][0] + vec[0] * vec[0] * ds[i];
+        dqj[i][2] = dqi[i][2] - 2 * vec[1] * ddi[i][1] + vec[1] * vec[1] * ds[i];
+        dqj[i][5] = dqi[i][5] - 2 * vec[2] * ddi[i][2] + vec[2] * vec[2] * ds[i];
+        dqj[i][1] = dqi[i][1] - vec[0] * ddi[i][1] - vec[1] * ddi[i][0] + vec[0] * vec[1] * ds[i];
+        dqj[i][3] = dqi[i][3] - vec[0] * ddi[i][2] - vec[2] * ddi[i][0] + vec[0] * vec[2] * ds[i];
+        dqj[i][4] = dqi[i][4] - vec[1] * ddi[i][2] - vec[2] * ddi[i][1] + vec[1] * vec[2] * ds[i];
+    }
+    dqj[0][0] -= 2 * di[0] - 2 * vec[0] * s;
+    dqj[1][2] -= 2 * di[1] - 2 * vec[1] * s;
+    dqj[2][5] -= 2 * di[2] - 2 * vec[2] * s;
+    dqj[0][1] -= di[1] - vec[1] * s;
+    dqj[1][1] -= di[0] - vec[0] * s;
+    dqj[0][3] -= di[2] - vec[2] * s;
+    dqj[2][3] -= di[0] - vec[0] * s;
+    dqj[1][4] -= di[2] - vec[2] * s;
+    dqj[2][4] -= di[1] - vec[1] * s;
+}
+
+
+// pure subroutine multipole_grad_3d(rpj, rpi, aj, ai, lj, li, s1d, s3d, d3d, q3d, &
+//     & ds3d, dd3d, dq3d)
+//  real(wp), intent(in) :: rpi(3)
+//  real(wp), intent(in) :: rpj(3)
+//  real(wp), intent(in) :: ai
+//  real(wp), intent(in) :: aj
+//  integer, intent(in) :: li(3)
+//  integer, intent(in) :: lj(3)
+//  real(wp), intent(in) :: s1d(0:)
+//  real(wp), intent(out) :: s3d
+//  real(wp), intent(out) :: d3d(3)
+//  real(wp), intent(out) :: q3d(6)
+//  real(wp), intent(out) :: ds3d(3)
+//  real(wp), intent(out) :: dd3d(3, 3)
+//  real(wp), intent(out) :: dq3d(3, 6)
+
+//  integer :: k, l
+//  real(wp) :: vi(0:maxl), vj(0:maxl), vv(0:maxl2), v1d(3, 3)
+//  real(wp) :: gi(0:maxl), gg(0:maxl2), g1d(3, 3), rpc
+
+//  v1d(:, :) = 0.0_wp
+//  g1d(:, :) = 0.0_wp
+
+//  do k = 1, 3
+//     vv(:) = 0.0_wp
+//     gg(:) = 0.0_wp
+//     vi(:) = 0.0_wp
+//     vj(:) = 0.0_wp
+//     gi(:) = 0.0_wp
+//     rpc = rpj(k)
+
+//     vi(li(k)) = 1.0_wp
+//     vj(lj(k)) = 1.0_wp
+//     gi(li(k)+1) = 2*ai
+//     if (li(k) > 0) gi(li(k)-1) = -li(k)
+
+//     call horizontal_shift(rpi(k), li(k)-1, gi)
+//     call horizontal_shift(rpi(k), li(k)+1, gi)
+//     call horizontal_shift(rpi(k), li(k), vi)
+//     call horizontal_shift(rpj(k), lj(k), vj)
+//     call form_product(vi, vj, li(k), lj(k), vv)
+//     call form_product(gi, vj, li(k)+1, lj(k), gg)
+//     do l = 0, li(k) + lj(k) + 1
+//        v1d(k, 1) = v1d(k, 1) + s1d(l) * vv(l)
+//        v1d(k, 2) = v1d(k, 2) + (s1d(l+1) + rpc*s1d(l)) * vv(l)
+//        v1d(k, 3) = v1d(k, 3) + (s1d(l+2) + 2*rpc*s1d(l+1) + rpc*rpc*s1d(l)) * vv(l)
+//        g1d(k, 1) = g1d(k, 1) + s1d(l) * gg(l)
+//        g1d(k, 2) = g1d(k, 2) + (s1d(l+1) + rpc*s1d(l)) * gg(l)
+//        g1d(k, 3) = g1d(k, 3) + (s1d(l+2) + 2*rpc*s1d(l+1) + rpc*rpc*s1d(l)) * gg(l)
+//     end do
+//  end do
+
+//  s3d = v1d(1, 1) * v1d(2, 1) * v1d(3, 1)
+//  d3d(1) = v1d(1, 2) * v1d(2, 1) * v1d(3, 1)
+//  d3d(2) = v1d(1, 1) * v1d(2, 2) * v1d(3, 1)
+//  d3d(3) = v1d(1, 1) * v1d(2, 1) * v1d(3, 2)
+//  q3d(1) = v1d(1, 3) * v1d(2, 1) * v1d(3, 1)
+//  q3d(2) = v1d(1, 2) * v1d(2, 2) * v1d(3, 1)
+//  q3d(3) = v1d(1, 1) * v1d(2, 3) * v1d(3, 1)
+//  q3d(4) = v1d(1, 2) * v1d(2, 1) * v1d(3, 2)
+//  q3d(5) = v1d(1, 1) * v1d(2, 2) * v1d(3, 2)
+//  q3d(6) = v1d(1, 1) * v1d(2, 1) * v1d(3, 3)
+
+//  ds3d(1) = g1d(1, 1) * v1d(2, 1) * v1d(3, 1)
+//  ds3d(2) = v1d(1, 1) * g1d(2, 1) * v1d(3, 1)
+//  ds3d(3) = v1d(1, 1) * v1d(2, 1) * g1d(3, 1)
+//  dd3d(1, 1) = g1d(1, 2) * v1d(2, 1) * v1d(3, 1)
+//  dd3d(2, 1) = v1d(1, 2) * g1d(2, 1) * v1d(3, 1)
+//  dd3d(3, 1) = v1d(1, 2) * v1d(2, 1) * g1d(3, 1)
+//  dd3d(1, 2) = g1d(1, 1) * v1d(2, 2) * v1d(3, 1)
+//  dd3d(2, 2) = v1d(1, 1) * g1d(2, 2) * v1d(3, 1)
+//  dd3d(3, 2) = v1d(1, 1) * v1d(2, 2) * g1d(3, 1)
+//  dd3d(1, 3) = g1d(1, 1) * v1d(2, 1) * v1d(3, 2)
+//  dd3d(2, 3) = v1d(1, 1) * g1d(2, 1) * v1d(3, 2)
+//  dd3d(3, 3) = v1d(1, 1) * v1d(2, 1) * g1d(3, 2)
+//  dq3d(1, 1) = g1d(1, 3) * v1d(2, 1) * v1d(3, 1)
+//  dq3d(2, 1) = v1d(1, 3) * g1d(2, 1) * v1d(3, 1)
+//  dq3d(3, 1) = v1d(1, 3) * v1d(2, 1) * g1d(3, 1)
+//  dq3d(1, 2) = g1d(1, 2) * v1d(2, 2) * v1d(3, 1)
+//  dq3d(2, 2) = v1d(1, 2) * g1d(2, 2) * v1d(3, 1)
+//  dq3d(3, 2) = v1d(1, 2) * v1d(2, 2) * g1d(3, 1)
+//  dq3d(1, 3) = g1d(1, 1) * v1d(2, 3) * v1d(3, 1)
+//  dq3d(2, 3) = v1d(1, 1) * g1d(2, 3) * v1d(3, 1)
+//  dq3d(3, 3) = v1d(1, 1) * v1d(2, 3) * g1d(3, 1)
+//  dq3d(1, 4) = g1d(1, 2) * v1d(2, 1) * v1d(3, 2)
+//  dq3d(2, 4) = v1d(1, 2) * g1d(2, 1) * v1d(3, 2)
+//  dq3d(3, 4) = v1d(1, 2) * v1d(2, 1) * g1d(3, 2)
+//  dq3d(1, 5) = g1d(1, 1) * v1d(2, 2) * v1d(3, 2)
+//  dq3d(2, 5) = v1d(1, 1) * g1d(2, 2) * v1d(3, 2)
+//  dq3d(3, 5) = v1d(1, 1) * v1d(2, 2) * g1d(3, 2)
+//  dq3d(1, 6) = g1d(1, 1) * v1d(2, 1) * v1d(3, 3)
+//  dq3d(2, 6) = v1d(1, 1) * g1d(2, 1) * v1d(3, 3)
+//  dq3d(3, 6) = v1d(1, 1) * v1d(2, 1) * g1d(3, 3)
+
+// end subroutine multipole_grad_3d
+
+__device__ 
+void multipole_grad_3d(
+    const double rpi[3], const double rpj[3],
+    const double ai, const double aj, 
+    const int li[3], const int lj[3], const double s1d[MAXL2],
+    
+    double &s3d, double d3d[3], double q3d[3], double ds3d[3], 
+    double dd3d[3][3], double dq3d[3][6])
+{
+    double v1d[3][3] = {0.0};
+    double g1d[3][3] = {0.0};
+    double vi[MAXL + 1] = {0.0};
+    double vj[MAXL + 1] = {0.0};
+    double vv[MAXL2 + 1] = {0.0};
+    double gi[MAXL + 1] = {0.0};
+    double gg[MAXL2 + 1] = {0.0};
+
+    for (int k = 0; k < 3; k++)
+    {
+        double rpc = rpj[k];
+        for (int i = 0; i <= MAXL; i++)
+        {
+            vi[i] = 0.0;
+            vj[i] = 0.0;
+            gi[i] = 0.0;
+        }
+        for (int i = 0; i <= MAXL2; i++)
+        {
+            vv[i] = 0.0;
+            gg[i] = 0.0;
+        }
+
+        vi[li[k]] = 1.0;
+        vj[lj[k]] = 1.0;
+        gi[li[k] + 1] = 2 * ai;
+        if (li[k] > 0)
+            gi[li[k] - 1] = -li[k];
+
+        horizontal_shift(rpi[k], li[k] - 1, gi);
+        horizontal_shift(rpi[k], li[k] + 1, gi);
+        horizontal_shift(rpi[k], li[k], vi);
+        horizontal_shift(rpj[k], lj[k], vj);
+        form_product(vi, vj, li[k], lj[k], vv);
+        form_product(gi, vj, li[k] + 1, lj[k], gg);
+
+        for (int l = 0; l <= li[k] + lj[k] + 1; l++)
+        {
+            v1d[k][0] += s1d[l] * vv[l];
+            v1d[k][1] += (s1d[l + 1] + rpc * s1d[l]) * vv[l];
+            v1d[k][2] += (s1d[l + 2] + 2 * rpc * s1d[l + 1] + rpc * rpc * s1d[l]) * vv[l];
+            g1d[k][0] += s1d[l] * gg[l];
+            g1d[k][1] += (s1d[l + 1] + rpc * s1d[l]) * gg[l];
+            g1d[k][2] += (s1d[l + 2] + 2 * rpc * s1d[l + 1] + rpc * rpc * s1d[l]) * gg[l];
+        }
+    }
+
+    s3d = v1d[0][0] * v1d[1][0] * v1d[2][0];
+    d3d[0] = v1d[0][1] * v1d[1][0] * v1d[2][0];
+    d3d[1] = v1d[0][0] * v1d[1][1] * v1d[2][0];
+    d3d[2] = v1d[0][0] * v1d[1][0] * v1d[2][1];
+    q3d[0] = v1d[0][2] * v1d[1][0] * v1d[2][0];
+    q3d[1] = v1d[0][1] * v1d[1][1] * v1d[2][0];
+    q3d[2] = v1d[0][0] * v1d[1][2] * v1d[2][0];
+    q3d[3] = v1d[0][1] * v1d[1][0] * v1d[2][1];
+    q3d[4] = v1d[0][0] * v1d[1][1] * v1d[2][1];
+    q3d[5] = v1d[0][0] * v1d[1][0] * v1d[2][2];
+
+    ds3d[0] = g1d[0][0] * v1d[1][0] * v1d[2][0];
+    ds3d[1] = v1d[0][0] * g1d[1][0] * v1d[2][0];
+    ds3d[2] = v1d[0][0] * v1d[1][0] * g1d[2][0];
+    dd3d[0][0] = g1d[0][1] * v1d[1][0] * v1d[2][0];
+    dd3d[1][0] = v1d[0][1] * g1d[1][0] * v1d[2][0];
+    dd3d[2][0] = v1d[0][1] * v1d[1][0] * g1d[2][0];
+    dd3d[0][1] = g1d[0][0] * v1d[1][1] * v1d[2][0];
+    dd3d[1][1] = v1d[0][0] * g1d[1][1] * v1d[2][0];
+    dd3d[2][1] = v1d[0][0] * v1d[1][1] * g1d[2][0];
+    dd3d[0][2] = g1d[0][0] * v1d[1][0] * v1d[2][1];
+    dd3d[1][2] = v1d[0][0] * g1d[1][0] * v1d[2][1];
+    dd3d[2][2] = v1d[0][0] * v1d[1][0] * g1d[2][1];
+    dq3d[0][0] = g1d[0][2] * v1d[1][0] * v1d[2][0];
+    dq3d[1][0] = v1d[0][2] * g1d[1][0] * v1d[2][0];
+    dq3d[2][0] = v1d[0][2] * v1d[1][0] * g1d[2][0];
+    dq3d[0][1] = g1d[0][1] * v1d[1][1] * v1d[2][0];
+    dq3d[1][1] = v1d[0][1] * g1d[1][1] * v1d[2][0];
+    dq3d[2][1] = v1d[0][1] * v1d[1][1] * g1d[2][0];
+    dq3d[0][2] = g1d[0][0] * v1d[1][2] * v1d[2][0];
+    dq3d[1][2] = v1d[0][0] * g1d[1][2] * v1d[2][0];
+    dq3d[2][2] = v1d[0][0] * v1d[1][2] * g1d[2][0];
+    dq3d[0][3] = g1d[0][1] * v1d[1][0] * v1d[2][1];
+    dq3d[1][3] = v1d[0][1] * g1d[1][0] * v1d[2][1];
+    dq3d[2][3] = v1d[0][1] * v1d[1][0] * g1d[2][1];
+    dq3d[0][4] = g1d[0][0] * v1d[1][1] * v1d[2][1];
+    dq3d[1][4] = v1d[0][0] * g1d[1][1] * v1d[2][1];
+    dq3d[2][4] = v1d[0][0] * v1d[1][1] * g1d[2][1];
+    dq3d[0][5] = g1d[0][0] * v1d[1][0] * v1d[2][2];
+    dq3d[1][5] = v1d[0][0] * g1d[1][0] * v1d[2][2];
+    dq3d[2][5] = v1d[0][0] * v1d[1][0] * g1d[2][2];
+}
