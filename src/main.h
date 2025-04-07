@@ -4,6 +4,97 @@
 #define MAXL2 12 // 2 x MAXL
 #define SQRT_PI 1.77245385091  // Approximation of sqrt(pi)
 #define SQRT_PI3 5.56832799683 // Approximation of sqrt(pi)^3
+#define S3 sqrt(3.0)
+#define S3_4 (S3 * 0.5)
+#define D32 (3.0 / 2.0)
+#define S3_8 sqrt(3.0 / 8.0)
+#define S5_8 sqrt(5.0 / 8.0)
+#define S6 sqrt(6.0)
+#define S15 sqrt(15.0)
+#define S15_4 sqrt(15.0 / 4.0)
+#define S45 sqrt(45.0)
+#define S45_8 sqrt(45.0 / 8.0)
+#define D38 (3.0 / 8.0)
+#define D34 (3.0 / 4.0)
+#define S5_16 sqrt(5.0 / 16.0)
+#define S10 sqrt(10.0)
+#define S10_8 sqrt(10.0 / 8.0)
+#define S35_4 sqrt(35.0 / 4.0)
+#define S35_8 sqrt(35.0 / 8.0)
+#define S35_64 sqrt(35.0 / 64.0)
+#define S45_4 sqrt(45.0 / 4.0)
+#define S315_8 sqrt(315.0 / 8.0)
+#define S315_16 sqrt(315.0 / 16.0)
+#pragma once
+
+template<typename T, int Rows, int Cols>
+class Matrix2D {
+private:
+    T data[Rows * Cols];
+
+public:
+    __device__ T& at(int row, int col) {
+        return data[row * Cols + col];
+    }
+
+    __device__ const T& at(int row, int col) const {
+        return data[row * Cols + col];
+    }
+
+    __device__ int rowCount() const { return Rows; }
+    __device__ int colCount() const { return Cols; }
+
+    // Optional raw access
+    __device__ T* rawData() { return data; }
+    __device__ const T* rawData() const { return data; }
+};
+
+template<typename T, int Depth, int Rows, int Cols>
+class Matrix3D {
+private:
+    T data[Depth * Rows * Cols];
+
+public:
+    __device__ T& at(int depth, int row, int col) {
+        return data[depth * Rows * Cols + row * Cols + col];
+    }
+
+    __device__ const T& at(int depth, int row, int col) const {
+        return data[depth * Rows * Cols + row * Cols + col];
+    }
+
+    __device__ int depthCount() const { return Depth; }
+    __device__ int rowCount() const { return Rows; }
+    __device__ int colCount() const { return Cols; }
+
+    // Optional raw access
+    __device__ T* rawData() { return data; }
+    __device__ const T* rawData() const { return data; }
+};
+
+template<typename T, int Time, int Depth, int Rows, int Cols>
+class Matrix4D {
+private:
+    T data[Time * Depth * Rows * Cols];
+
+public:
+    __device__ T& at(int time, int depth, int row, int col) {
+        return data[time * Depth * Rows * Cols + depth * Rows * Cols + row * Cols + col];
+    }
+
+    __device__ const T& at(int time, int depth, int row, int col) const {
+        return data[time * Depth * Rows * Cols + depth * Rows * Cols + row * Cols + col];
+    }
+
+    __device__ int timeCount() const { return Time; }
+    __device__ int depthCount() const { return Depth; }
+    __device__ int rowCount() const { return Rows; }
+    __device__ int colCount() const { return Cols; }
+
+    // Optional raw access
+    __device__ T* rawData() { return data; }
+    __device__ const T* rawData() const { return data; }
+};
 
 /* type :: adjacency_list
  !> Offset index in the neighbour map
@@ -91,5 +182,8 @@ __device__ void multipole_grad_3d(
         
         double &s3d, double d3d[3], double q3d[3], double ds3d[3], 
         double dd3d[3][3], double dq3d[3][6]);
+__device__ void transform0(
+    int r, int c, const int lj, const int li, 
+    const double *cart, double *sphr);
 
 #endif // FOO_H_

@@ -1,5 +1,6 @@
 #include "main.h"
-
+#include <iostream>
+#include <assert.h>
 // pure subroutine form_product(a, b, la, lb, d)
 //    integer, intent(in) :: la, lb
 //    real(wp), intent(in) :: a(*), b(*)
@@ -514,4 +515,292 @@ void multipole_grad_3d(
     dq3d[0][5] = g1d[0][0] * v1d[1][0] * v1d[2][2];
     dq3d[1][5] = v1d[0][0] * g1d[1][0] * v1d[2][2];
     dq3d[2][5] = v1d[0][0] * v1d[1][0] * g1d[2][2];
+}
+
+/*
+
+pure subroutine transform0(lj, li, cart, sphr)
+   integer, intent(in) :: li
+   integer, intent(in) :: lj
+   real(wp), intent(in) :: cart(:, :)
+   real(wp), intent(out) :: sphr(:, :)
+
+   select case(li)
+   case(0, 1)
+      select case(lj)
+      case(0, 1)
+         sphr = cart
+      case(2)
+         ! sphr = matmul(dtrafo, cart)
+         sphr(1, :) = cart(3, :) - 0.5_wp * (cart(1, :) + cart(2, :))
+         sphr(2, :) = s3 * cart(5, :)
+         sphr(3, :) = s3 * cart(6, :)
+         sphr(4, :) = s3_4 * (cart(1, :) - cart(2, :))
+         sphr(5, :) = s3 * cart(4, :)
+      case(3)
+         sphr = matmul(ftrafo, cart)
+      case(4)
+         sphr = matmul(gtrafo, cart)
+      case default
+         error stop "[Fatal] Moments higher than g are not supported"
+      end select
+
+   case(2)
+      select case(lj)
+      case(0, 1)
+         ! sphr = matmul(cart, transpose(dtrafo))
+         sphr(:, 1) = cart(:, 3) - 0.5_wp * (cart(:, 1) + cart(:, 2))
+         sphr(:, 2) = s3 * cart(:, 5)
+         sphr(:, 3) = s3 * cart(:, 6)
+         sphr(:, 4) = s3_4 * (cart(:, 1) - cart(:, 2))
+         sphr(:, 5) = s3 * cart(:, 4)
+      case(2)
+         ! sphr = matmul(dtrafo, matmul(cart, transpose(dtrafo)))
+         sphr(1, 1) = cart(3, 3) &
+            & - 0.5_wp * (cart(3, 1) + cart(3, 2) + cart(1, 3) + cart(2, 3)) &
+            & + 0.25_wp * (cart(1, 1) + cart(1, 2) + cart(2, 1) + cart(2, 2))
+         sphr([2, 3, 5], 1) = s3 * cart([5, 6, 4], 3) &
+            & - s3_4 * (cart([5, 6, 4], 1) + cart([5, 6, 4], 2))
+         sphr(4, 1) = s3_4 * (cart(1, 3) - cart(2, 3)) &
+            & - s3 * 0.25_wp * (cart(1, 1) - cart(2, 1) + cart(1, 2) - cart(2, 2))
+         sphr(1, 2) = s3 * cart(3, 5) - s3_4 * (cart(1, 5) + cart(2, 5))
+         sphr([2, 3, 5], 2) = 3 * cart([5, 6, 4], 5)
+         sphr(4, 2) = 1.5_wp * (cart(1, 5) - cart(2, 5))
+         sphr(1, 3) = s3 * cart(3, 6) - s3_4 * (cart(1, 6) + cart(2, 6))
+         sphr([2, 3, 5], 3) = 3 * cart([5, 6, 4], 6)
+         sphr(4, 3) = 1.5_wp * (cart(1, 6) - cart(2, 6))
+         sphr(1, 4) = s3_4 * (cart(3, 1) - cart(3, 2)) &
+            & - s3 * 0.25_wp * (cart(1, 1) - cart(1, 2) + cart(2, 1) - cart(2, 2))
+         sphr([2, 3, 5], 4) = 1.5_wp * (cart([5, 6, 4], 1) - cart([5, 6, 4], 2))
+         sphr(4, 4) = 0.75_wp * (cart(1, 1) - cart(2, 1) - cart(1, 2) + cart(2, 2))
+         sphr(1, 5) = s3 * cart(3, 4) - s3_4 * (cart(1, 4) + cart(2, 4))
+         sphr([2, 3, 5], 5) = 3 * cart([5, 6, 4], 4)
+         sphr(4, 5) = 1.5_wp * (cart(1, 4) - cart(2, 4))
+      case(3)
+         sphr = matmul(ftrafo, matmul(cart, transpose(dtrafo)))
+      case(4)
+         sphr = matmul(gtrafo, matmul(cart, transpose(dtrafo)))
+      case default
+         error stop "[Fatal] Moments higher than g are not supported"
+      end select
+
+   case(3)
+      select case(lj)
+      case(0, 1)
+         sphr = matmul(cart, transpose(ftrafo))
+      case(2)
+         sphr = matmul(dtrafo, matmul(cart, transpose(ftrafo)))
+      case(3)
+         sphr = matmul(ftrafo, matmul(cart, transpose(ftrafo)))
+      case(4)
+         sphr = matmul(gtrafo, matmul(cart, transpose(ftrafo)))
+      case default
+         error stop "[Fatal] Moments higher than g are not supported"
+      end select
+
+   case(4)
+      select case(lj)
+      case(0, 1)
+         sphr = matmul(cart, transpose(gtrafo))
+      case(2)
+         sphr = matmul(dtrafo, matmul(cart, transpose(gtrafo)))
+      case(3)
+         sphr = matmul(ftrafo, matmul(cart, transpose(gtrafo)))
+      case(4)
+         sphr = matmul(gtrafo, matmul(cart, transpose(gtrafo)))
+      case default
+         error stop "[Fatal] Moments higher than g are not supported"
+      end select
+
+   case default
+      error stop "[Fatal] Moments higher than g are not supported"
+   end select
+
+end subroutine transform0
+
+*/
+
+
+__device__
+void transform0(
+    const int r, const int c, const int lj, const int li, 
+    const double *cart, double *sphr) {
+    switch (li) {
+        case 0:
+        case 1:
+            switch (lj) {
+                case 0:
+                case 1:
+                    // sphr = cart
+                    memcpy(sphr, cart, r * c * sizeof(double));
+                    break;
+                case 2:
+                    // sphr(1, :) = cart(3, :) - 0.5_wp * (cart(1, :) + cart(2, :))
+                    for (int j = 0; j < c; j++) {
+                        sphr[0 * c + j] = cart[2 * c + j] - 0.5 * (cart[0 * c + j] + cart[1 * c + j]);
+                        sphr[1 * c + j] = S3 * cart[4 * c + j];
+                        sphr[2 * c + j] = S3 * cart[5 * c + j];
+                        sphr[3 * c + j] = S3_4 * (cart[0 * c + j] - cart[1 * c + j]);
+                        sphr[4 * c + j] = S3 * cart[3 * c + j];
+                    }
+                    break;
+                case 3:
+                    // TODO: sphr = matmul(ftrafo, cart)
+                    printf("[Error] Matmul with ftrafo not yet implemented.\n");
+                    assert(false);
+                    break;
+                case 4:
+                    // TODO: sphr = matmul(gtrafo, cart)
+                    printf("[Error] Matmul with gtrafo not yet implemented.\n");
+                    assert(false);
+                    break;
+                default:
+                    printf("[Fatal] Moments higher than g are not supported.\n");
+                    assert(false);
+            }
+            break;
+
+        case 2:
+            switch (lj) {
+                case 0:
+                case 1:
+                    // sphr(:, 1) = cart(:, 3) - 0.5_wp * (cart(:, 1) + cart(:, 2))
+                    // for (int i = 0; i < cols; i++) {
+                    //     sphr[i * cols + 0] = cart[i * cols + 2] - 0.5 * (cart[i * cols + 0] + cart[i * cols + 1]);
+                    //     sphr[i * cols + 1] = S3 * cart[i * cols + 4];
+                    //     sphr[i * cols + 2] = S3 * cart[i * cols + 5];
+                    //     sphr[i * cols + 3] = S3_4 * (cart[i * cols + 0] - cart[i * cols + 1]);
+                    //     sphr[i * cols + 4] = S3 * cart[i * cols + 3];
+                    // }
+                    break;
+                case 2:
+                    // TODO: sphr = matmul(dtrafo, matmul(cart, transpose(dtrafo)))
+                    printf("[Error] Matmul with dtrafo not yet implemented.\n");
+                    assert(false);
+                    break;
+                case 3:
+                    // TODO: sphr = matmul(ftrafo, matmul(cart, transpose(dtrafo)))
+                    printf("[Error] Matmul with ftrafo and dtrafo not yet implemented.\n");
+                    assert(false);
+                    break;
+                case 4:
+                    // TODO: sphr = matmul(gtrafo, matmul(cart, transpose(dtrafo)))
+                    printf("[Error] Matmul with gtrafo and dtrafo not yet implemented.\n");
+                    assert(false);
+                    break;
+                default:
+                    printf("[Fatal] Moments higher than g are not supported.\n");
+                    assert(false);
+            }
+            break;
+
+        case 3:
+            switch (lj) {
+                case 0:
+                case 1:
+                    // TODO: sphr = matmul(cart, transpose(ftrafo))
+                    printf("[Error] Matmul with transpose(ftrafo) not yet implemented.\n");
+                    assert(false);
+                    break;
+                case 2:
+                    // TODO: sphr = matmul(dtrafo, matmul(cart, transpose(ftrafo)))
+                    printf("[Error] Matmul with dtrafo and transpose(ftrafo) not yet implemented.\n");
+                    assert(false);
+                    break;
+                case 3:
+                    // TODO: sphr = matmul(ftrafo, matmul(cart, transpose(ftrafo)))
+                    printf("[Error] Matmul with ftrafo and transpose(ftrafo) not yet implemented.\n");
+                    assert(false);
+                    break;
+                case 4:
+                    // TODO: sphr = matmul(gtrafo, matmul(cart, transpose(ftrafo)))
+                    printf("[Error] Matmul with gtrafo and transpose(ftrafo) not yet implemented.\n");
+                    assert(false);
+                    break;
+                default:
+                    printf("[Fatal] Moments higher than g are not supported.\n");
+                    assert(false);
+            }
+            break;
+
+        case 4:
+            switch (lj) {
+                case 0:
+                case 1:
+                    // TODO: sphr = matmul(cart, transpose(gtrafo))
+                    printf("[Error] Matmul with transpose(gtrafo) not yet implemented.\n");
+                    assert(false);
+                    break;
+                case 2:
+                    // TODO: sphr = matmul(dtrafo, matmul(cart, transpose(gtrafo)))
+                    printf("[Error] Matmul with dtrafo and transpose(gtrafo) not yet implemented.\n");
+                    assert(false);
+                    break;
+                case 3:
+                    // TODO: sphr = matmul(ftrafo, matmul(cart, transpose(gtrafo)))
+                    printf("[Error] Matmul with ftrafo and transpose(gtrafo) not yet implemented.\n");
+                    assert(false);
+                    break;
+                case 4:
+                    // TODO: sphr = matmul(gtrafo, matmul(cart, transpose(gtrafo)))
+                    printf("[Error] Matmul with gtrafo and transpose(gtrafo) not yet implemented.\n");
+                    assert(false);
+                    break;
+                default:
+                    printf("[Fatal] Moments higher than g are not supported.\n");
+                    assert(false);
+            }
+            break;
+
+        default:
+            printf("[Fatal] Moments higher than g are not supported.\n");
+            assert(false);
+    }
+}
+
+// pure subroutine transform1(lj, li, cart, sphr)
+//    integer, intent(in) :: li
+//    integer, intent(in) :: lj
+//    real(wp), intent(in) :: cart(:, :, :)
+//    real(wp), intent(out) :: sphr(:, :, :)
+//    integer :: k
+
+//    do k = 1, size(cart, 1)
+//       call transform0(lj, li, cart(k, :, :), sphr(k, :, :))
+//    end do
+// end subroutine transform1
+
+__device__
+void transform1(
+   const int r, const int c, const int d, const int lj, const int li, 
+    const double *cart, double *sphr) {
+    for (int k = 0; k < r; k++) {
+        transform0(c, d, lj, li, &cart[k * c * d], &sphr[k * c * d]);
+    }
+}
+
+// pure subroutine transform2(lj, li, cart, sphr)
+//    integer, intent(in) :: li
+//    integer, intent(in) :: lj
+//    real(wp), intent(in) :: cart(:, :, :, :)
+//    real(wp), intent(out) :: sphr(:, :, :, :)
+//    integer :: k, l
+
+//    do l = 1, size(cart, 2)
+//       do k = 1, size(cart, 1)
+//          call transform0(lj, li, cart(k, l, :, :), sphr(k, l, :, :))
+//       end do
+//    end do
+// end subroutine transform2
+
+__device__
+void transform2(
+    const int r, const int c, const int d, const int e, 
+    const int lj, const int li, 
+    const double *cart, double *sphr) {
+    for (int l = 0; l < r; l++) {
+        for (int k = 0; k < c; k++) {
+            transform0(d, e, lj, li, &cart[(l * c + k) * d * e], &sphr[(l * c + k) * d * e]);
+        }
+    }
 }

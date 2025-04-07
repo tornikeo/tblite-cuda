@@ -149,6 +149,51 @@ __global__ void test_multipole_grad_3d()
     }
 }
 
+__global__ void test_transform0() {
+    int li = 0, lj = 2;
+    double cart[6] = {0.64511743228799334, 0.64511743228799334, 0.64511743228799334, 0, 0, 0};
+    double sphr[6] = {0};
+
+    int r = 6, c = 1;
+
+    transform0(r, c, lj, li, cart, sphr);
+
+    for (size_t i = 0; i < r; i++)
+    {
+        assert(sphr[i] == 0.0);
+    }
+    
+    printf("transform0 result: ");
+    for (int i = 0; i < r * c; ++i) {
+        printf("%f \n", sphr[i]);
+    }
+    printf("\n");
+}
+
+__global__ void test_fill_matrix() {
+    Matrix2D<float, 128, 128> mat;
+    
+    for (size_t i = 0; i < mat.rowCount(); i++)
+    {
+        for (size_t j = 0; j < mat.colCount(); j++)
+        {
+            mat.at(i, j) = i*4 + j;
+        }
+    }
+
+    for (size_t i = 0; i < mat.rowCount(); i++)
+    {
+        for (size_t j = 0; j < mat.colCount(); j++)
+        {
+            auto val = mat.at(i,j);
+            assert(val == i * 4 + j);
+        }
+    }
+}
+
+
+
+
 int main()
 {
     std::cout << "Running test_form_product..." << std::endl;
@@ -166,7 +211,15 @@ int main()
     std::cout << "Running test_multipole_grad_3d..." << std::endl;
     test_multipole_grad_3d<<<1, 1>>>();
     cudaDeviceSynchronize();
-    return 0;
 
+    std::cout << "Running test_transform0..." << std::endl;
+    test_transform0<<<1, 1>>>();
+    cudaDeviceSynchronize();    
+
+    std::cout << "Running test_fill_matrix..." << std::endl;
+    test_fill_matrix<<<1, 1>>>();
+    cudaDeviceSynchronize();
+
+    
     return 0;
 }
