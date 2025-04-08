@@ -151,16 +151,16 @@ __global__ void test_multipole_grad_3d()
 
 __global__ void test_transform0() {
     int li = 0, lj = 2;
-    double cart[6] = {0.64511743228799334, 0.64511743228799334, 0.64511743228799334, 0, 0, 0};
-    double sphr[6] = {0};
+    double cart[6][6] = {0.64511743228799334, 0.64511743228799334, 0.64511743228799334, 0, 0, 0};
+    double sphr[5][5] = {0};
 
     int r = 6, c = 1;
 
-    transform0(r, c, lj, li, cart, sphr);
+    transform0(lj, li, cart, sphr);
 
     for (size_t i = 0; i < r; i++)
     {
-        assert(sphr[i] == 0.0);
+        assert(sphr[i][0] == 0.0);
     }
     
     printf("transform0 result: ");
@@ -191,8 +191,38 @@ __global__ void test_fill_matrix() {
     }
 }
 
+// #define MSAO 3;
+__global__
+void test_call_multipole_grad_cgto(void) {
+    // Example test call for multipole_grad_cgto
+    // const int MSAO = 3;
+    // const int MLAO = 3;
+    // const int LMAP = 1;
 
+    cgto_type cgtoj = {/* Initialize with appropriate values */};
+    cgto_type cgtoi = {/* Initialize with appropriate values */};
+    double r2 = 1.0;
+    double vec[3] = {0.1, 0.2, 0.3};
+    double intcut = 1e-6;
 
+    double overlap[MSAO][MSAO] = {0.0};
+    double dpint[3][MSAO][MSAO] = {0.0};
+    double qpint[6][MSAO][MSAO] = {0.0};
+    double doverlap[3][MSAO][MSAO] = {0.0};
+    double ddpinti[3][3][MSAO][MSAO] = {0.0};
+    double dqpinti[3][6][MSAO][MSAO] = {0.0};
+    double ddpintj[3][3][MSAO][MSAO] = {0.0};
+    double dqpintj[3][6][MSAO][MSAO] = {0.0};
+
+    multipole_grad_cgto(
+        cgtoj, cgtoi, 
+        r2, vec, intcut,
+        overlap, dpint, qpint, doverlap, ddpinti, dqpinti, ddpintj, dqpintj
+    );
+
+    // Print or validate results as needed
+    printf("Test call completed.\n");
+}
 
 int main()
 {
@@ -220,6 +250,9 @@ int main()
     test_fill_matrix<<<1, 1>>>();
     cudaDeviceSynchronize();
 
-    
+    std::cout << "Running test_fill_matrix..." << std::endl;
+    test_call_multipole_grad_cgto<<<1, 1>>>();
+    cudaDeviceSynchronize();
+        
     return 0;
 }

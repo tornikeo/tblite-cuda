@@ -2,7 +2,7 @@
 
 # Compiler and flags
 NVCC := nvcc
-CXXFLAGS := -O0 -std=c++11 -rdc=true
+CXXFLAGS := -O0 -std=c++20 -rdc=true
 
 # Directories
 SRC_DIR := src

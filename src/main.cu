@@ -623,8 +623,9 @@ end subroutine transform0
 
 __device__
 void transform0(
-    const int r, const int c, const int lj, const int li, 
-    const double *cart, double *sphr) {
+    const int lj, const int li, 
+    const double (&cart)[MLAO][MLAO], double (&sphr)[MSAO][MSAO]
+) {
     switch (li) {
         case 0:
         case 1:
@@ -632,16 +633,16 @@ void transform0(
                 case 0:
                 case 1:
                     // sphr = cart
-                    memcpy(sphr, cart, r * c * sizeof(double));
+                    memcpy(sphr, cart, 3 * 6 * sizeof(double));
                     break;
                 case 2:
                     // sphr(1, :) = cart(3, :) - 0.5_wp * (cart(1, :) + cart(2, :))
-                    for (int j = 0; j < c; j++) {
-                        sphr[0 * c + j] = cart[2 * c + j] - 0.5 * (cart[0 * c + j] + cart[1 * c + j]);
-                        sphr[1 * c + j] = S3 * cart[4 * c + j];
-                        sphr[2 * c + j] = S3 * cart[5 * c + j];
-                        sphr[3 * c + j] = S3_4 * (cart[0 * c + j] - cart[1 * c + j]);
-                        sphr[4 * c + j] = S3 * cart[3 * c + j];
+                    for (int j = 0; j < MSAO; j++) {
+                        sphr[0][j] = cart[2][j] - 0.5 * (cart[0][j] + cart[1][j]);
+                        sphr[1][j] = S3 * cart[4][j];
+                        sphr[2][j] = S3 * cart[5][j];
+                        sphr[3][j] = S3_4 * (cart[0][j] - cart[1][j]);
+                        sphr[4][j] = S3 * cart[3][j];
                     }
                     break;
                 case 3:
@@ -770,12 +771,13 @@ void transform0(
 //    end do
 // end subroutine transform1
 
+template <size_t N>
 __device__
-void transform1(
-   const int r, const int c, const int d, const int lj, const int li, 
-    const double *cart, double *sphr) {
-    for (int k = 0; k < r; k++) {
-        transform0(c, d, lj, li, &cart[k * c * d], &sphr[k * c * d]);
+void transform1(const int lj, const int li, 
+    const double (&cart)[N][MLAO][MLAO], double (&sphr)[N][MSAO][MSAO]
+) {
+    for (int i = 0; i < N; i++) {
+        transform0(lj, li, cart[i], sphr[i]);
     }
 }
 
@@ -793,14 +795,330 @@ void transform1(
 //    end do
 // end subroutine transform2
 
+template <size_t N, size_t M>
 __device__
-void transform2(
-    const int r, const int c, const int d, const int e, 
-    const int lj, const int li, 
-    const double *cart, double *sphr) {
-    for (int l = 0; l < r; l++) {
-        for (int k = 0; k < c; k++) {
-            transform0(d, e, lj, li, &cart[(l * c + k) * d * e], &sphr[(l * c + k) * d * e]);
+void transform2(const int lj, const int li, 
+    const double (&cart)[N][M][MLAO][MLAO], double (&sphr)[N][M][MSAO][MSAO]
+) {
+    for (int i = 0; i < N; i++) {
+        for (int j = 0; j < M; i++) {
+            transform0(lj, li, cart[i][j], sphr[i][j]);
         }
     }
 }
+
+
+/*
+elemental function overlap_1d(moment, alpha) result(overlap)
+   integer, intent(in) :: moment
+   real(wp), intent(in) :: alpha
+   real(wp) :: overlap
+   real(wp), parameter :: dfactorial(0:7) = & ! see OEIS A001147
+      & [1._wp,1._wp,3._wp,15._wp,105._wp,945._wp,10395._wp,135135._wp]
+
+   if (modulo(moment, 2) == 0) then
+      overlap = (0.5_wp/alpha)**(moment/2) * dfactorial(moment/2)
+   else
+      overlap = 0.0_wp
+   end if
+end function overlap_1d
+
+*/
+
+__device__ 
+double overlap_1d(const int moment, const double alpha) {
+    const double dfactorial[] = {1.0, 1.0, 3.0, 15.0, 105.0, 945.0, 10395.0, 135135.0};
+    if (moment % 2 == 0) {
+        return pow(0.5 / alpha, moment / 2) * dfactorial[moment / 2];
+    } else {
+        return 0.0;
+    }
+}
+
+/*
+
+pure subroutine multipole_grad_cgto(cgtoj, cgtoi, r2, vec, intcut, overlap, dpint, qpint, &
+      & doverlap, ddpintj, dqpintj, ddpinti, dqpinti)
+   !> Description of contracted Gaussian function on center i
+   type(cgto_type), intent(in) :: cgtoi
+   !> Description of contracted Gaussian function on center j
+   type(cgto_type), intent(in) :: cgtoj
+   !> Square distance between center i and j
+   real(wp), intent(in) :: r2
+   !> Distance vector between center i and j, ri - rj
+   real(wp), intent(in) :: vec(3)
+   !> Maximum value of integral prefactor to consider
+   real(wp), intent(in) :: intcut
+   !> Overlap integrals for the given pair i  and j
+   real(wp), intent(out) :: overlap(msao(cgtoj%ang), msao(cgtoi%ang))
+   !> Dipole moment integrals for the given pair i  and j
+   real(wp), intent(out) :: dpint(3, msao(cgtoj%ang), msao(cgtoi%ang))
+   !> Quadrupole moment integrals for the given pair i  and j
+   real(wp), intent(out) :: qpint(6, msao(cgtoj%ang), msao(cgtoi%ang))
+   !> Overlap integral gradient for the given pair i  and j
+   real(wp), intent(out) :: doverlap(3, msao(cgtoj%ang), msao(cgtoi%ang))
+   !> Dipole moment integral gradient for the given pair i  and j
+   real(wp), intent(out) :: ddpinti(3, 3, msao(cgtoj%ang), msao(cgtoi%ang))
+   !> Quadrupole moment integral gradient for the given pair i  and j
+   real(wp), intent(out) :: dqpinti(3, 6, msao(cgtoj%ang), msao(cgtoi%ang))
+   !> Dipole moment integral gradient for the given pair i  and j
+   real(wp), intent(out) :: ddpintj(3, 3, msao(cgtoj%ang), msao(cgtoi%ang))
+   !> Quadrupole moment integral gradient for the given pair i  and j
+   real(wp), intent(out) :: dqpintj(3, 6, msao(cgtoj%ang), msao(cgtoi%ang))
+
+   integer :: ip, jp, mli, mlj, l
+   real(wp) :: eab, oab, est, s1d(0:maxl2), rpi(3), rpj(3), cc, val, dip(3), quad(6)
+   real(wp) :: pre, grad(3), ddip(3, 3), dquad(3, 6), tr, dtr(3)
+   real(wp) :: s3d(mlao(cgtoj%ang), mlao(cgtoi%ang))
+   real(wp) :: d3dj(3, mlao(cgtoj%ang), mlao(cgtoi%ang))
+   real(wp) :: q3dj(6, mlao(cgtoj%ang), mlao(cgtoi%ang))
+   real(wp) :: ds3d(3, mlao(cgtoj%ang), mlao(cgtoi%ang))
+   real(wp) :: dd3di(3, 3, mlao(cgtoj%ang), mlao(cgtoi%ang))
+   real(wp) :: dq3di(3, 6, mlao(cgtoj%ang), mlao(cgtoi%ang))
+   real(wp) :: dd3dj(3, 3, mlao(cgtoj%ang), mlao(cgtoi%ang))
+   real(wp) :: dq3dj(3, 6, mlao(cgtoj%ang), mlao(cgtoi%ang))
+
+   s3d(:, :) = 0.0_wp
+   d3dj(:, :, :) = 0.0_wp
+   q3dj(:, :, :) = 0.0_wp
+   ds3d(:, :, :) = 0.0_wp
+   dd3di(:, :, :, :) = 0.0_wp
+   dq3di(:, :, :, :) = 0.0_wp
+   dd3dj(:, :, :, :) = 0.0_wp
+   dq3dj(:, :, :, :) = 0.0_wp
+
+   do ip = 1, cgtoi%nprim
+      do jp = 1, cgtoj%nprim
+         eab = cgtoi%alpha(ip) + cgtoj%alpha(jp)
+         oab = 1.0_wp/eab
+         est = cgtoi%alpha(ip) * cgtoj%alpha(jp) * r2 * oab
+         if (est > intcut) cycle
+         pre = exp(-est) * sqrtpi3*sqrt(oab)**3
+         rpi = -vec * cgtoj%alpha(jp) * oab
+         rpj = +vec * cgtoi%alpha(ip) * oab
+         do l = 0, cgtoi%ang + cgtoj%ang + 3
+            s1d(l) = overlap_1d(l, eab)
+         end do
+         cc = cgtoi%coeff(ip) * cgtoj%coeff(jp) * pre
+         do mli = 1, mlao(cgtoi%ang)
+            do mlj = 1, mlao(cgtoj%ang)
+               call multipole_grad_3d(rpj, rpi, cgtoj%alpha(jp), cgtoi%alpha(ip), &
+                  & lx(:, mlj+lmap(cgtoj%ang)), lx(:, mli+lmap(cgtoi%ang)), &
+                  & s1d, val, dip, quad, grad, ddip, dquad)
+               s3d(mlj, mli) = s3d(mlj, mli) + cc*val
+               d3dj(:, mlj, mli) = d3dj(:, mlj, mli) + cc*dip
+               q3dj(:, mlj, mli) = q3dj(:, mlj, mli) + cc*quad
+               ds3d(:, mlj, mli) = ds3d(:, mlj, mli) + cc*grad
+               dd3dj(:, :, mlj, mli) = dd3dj(:, :, mlj, mli) + cc*ddip
+               dq3dj(:, :, mlj, mli) = dq3dj(:, :, mlj, mli) + cc*dquad
+            end do
+         end do
+      end do
+   end do
+
+   do mli = 1, mlao(cgtoi%ang)
+      do mlj = 1, mlao(cgtoj%ang)
+         call shift_operator(vec, s3d(mlj, mli), d3dj(:, mlj, mli), q3dj(:, mlj, mli), &
+            & ds3d(:, mlj, mli), dd3dj(:, :, mlj, mli), dq3dj(:, :, mlj, mli), &
+            & dd3di(:, :, mlj, mli), dq3di(:, :, mlj, mli))
+      end do
+   end do
+
+   call transform0(cgtoj%ang, cgtoi%ang, s3d, overlap)
+   call transform1(cgtoj%ang, cgtoi%ang, d3dj, dpint)
+   call transform1(cgtoj%ang, cgtoi%ang, q3dj, qpint)
+   call transform1(cgtoj%ang, cgtoi%ang, ds3d, doverlap)
+   call transform2(cgtoj%ang, cgtoi%ang, dd3dj, ddpintj)
+   call transform2(cgtoj%ang, cgtoi%ang, dq3dj, dqpintj)
+   call transform2(cgtoj%ang, cgtoi%ang, dd3di, ddpinti)
+   call transform2(cgtoj%ang, cgtoi%ang, dq3di, dqpinti)
+
+   ! remove trace from quadrupole integrals (transfrom to spherical harmonics and back)
+   do mli = 1, msao(cgtoi%ang)
+      do mlj = 1, msao(cgtoj%ang)
+         tr = 0.5_wp * (qpint(1, mlj, mli) + qpint(3, mlj, mli) + qpint(6, mlj, mli))
+         qpint(1, mlj, mli) = 1.5_wp * qpint(1, mlj, mli) - tr
+         qpint(2, mlj, mli) = 1.5_wp * qpint(2, mlj, mli)
+         qpint(3, mlj, mli) = 1.5_wp * qpint(3, mlj, mli) - tr
+         qpint(4, mlj, mli) = 1.5_wp * qpint(4, mlj, mli)
+         qpint(5, mlj, mli) = 1.5_wp * qpint(5, mlj, mli)
+         qpint(6, mlj, mli) = 1.5_wp * qpint(6, mlj, mli) - tr
+      end do
+   end do
+
+   ! remove trace from quadrupole integral derivatives
+   do mli = 1, msao(cgtoi%ang)
+      do mlj = 1, msao(cgtoj%ang)
+         dtr = dqpinti(:, 1, mlj, mli) + dqpinti(:, 3, mlj, mli) + dqpinti(:, 6, mlj, mli)
+         dqpinti(:, 1, mlj, mli) = 1.5_wp * dqpinti(:, 1, mlj, mli) - 0.5_wp * dtr
+         dqpinti(:, 2, mlj, mli) = 1.5_wp * dqpinti(:, 2, mlj, mli)
+         dqpinti(:, 3, mlj, mli) = 1.5_wp * dqpinti(:, 3, mlj, mli) - 0.5_wp * dtr
+         dqpinti(:, 4, mlj, mli) = 1.5_wp * dqpinti(:, 4, mlj, mli)
+         dqpinti(:, 5, mlj, mli) = 1.5_wp * dqpinti(:, 5, mlj, mli)
+         dqpinti(:, 6, mlj, mli) = 1.5_wp * dqpinti(:, 6, mlj, mli) - 0.5_wp * dtr
+      end do
+   end do
+
+   ! remove trace from quadrupole integral derivatives
+   do mli = 1, msao(cgtoi%ang)
+      do mlj = 1, msao(cgtoj%ang)
+         dtr = dqpintj(:, 1, mlj, mli) + dqpintj(:, 3, mlj, mli) + dqpintj(:, 6, mlj, mli)
+         dqpintj(:, 1, mlj, mli) = 1.5_wp * dqpintj(:, 1, mlj, mli) - 0.5_wp * dtr
+         dqpintj(:, 2, mlj, mli) = 1.5_wp * dqpintj(:, 2, mlj, mli)
+         dqpintj(:, 3, mlj, mli) = 1.5_wp * dqpintj(:, 3, mlj, mli) - 0.5_wp * dtr
+         dqpintj(:, 4, mlj, mli) = 1.5_wp * dqpintj(:, 4, mlj, mli)
+         dqpintj(:, 5, mlj, mli) = 1.5_wp * dqpintj(:, 5, mlj, mli)
+         dqpintj(:, 6, mlj, mli) = 1.5_wp * dqpintj(:, 6, mlj, mli) - 0.5_wp * dtr
+      end do
+   end do
+
+end subroutine multipole_grad_cgto
+*/
+
+
+
+__device__ 
+void multipole_grad_cgto(
+    const cgto_type cgtoj,
+    const cgto_type cgtoi,
+    const double r2, 
+    const double vec[3],
+    const double intcut,
+
+    double (&overlap)[MSAO][MSAO],
+    double (&dpint)[3][MSAO][MSAO],
+    double (&qpint)[6][MSAO][MSAO],
+    double (&doverlap)[3][MSAO][MSAO],
+    double (&ddpinti)[3][3][MSAO][MSAO],
+    double (&dqpinti)[3][6][MSAO][MSAO],
+    double (&ddpintj)[3][3][MSAO][MSAO],
+    double (&dqpintj)[3][6][MSAO][MSAO]
+) {
+
+    const int lx[8][3] = {
+        {0,0,0}, 
+        {0,1,0},
+        {0,0,1},
+        {1,0,0},
+        {2,0,0},
+        {0,2,0},
+        {0,0,2},
+        {1,1,2},
+    };
+
+    double eab, oab, est, s1d[MAXL2 + 1], rpi[3], rpj[3], cc, val, dip[3], quad[6];
+    double pre, grad[3], ddip[3][3], dquad[3][6], tr, dtr[3];
+    double s3d[MLAO][MLAO] = {0.0};
+    double d3dj[3][MLAO][MLAO] = {0.0};
+    double q3dj[6][MLAO][MLAO] = {0.0};
+    double ds3d[3][MLAO][MLAO] = {0.0};
+    double dd3di[3][3][MLAO][MLAO] = {0.0};
+    double dq3di[3][6][MLAO][MLAO] = {0.0};
+    double dd3dj[3][3][MLAO][MLAO] = {0.0};
+    double dq3dj[3][6][MLAO][MLAO] = {0.0};
+
+    for (int ip = 0; ip < cgtoi.nprim; ip++) {
+        for (int jp = 0; jp < cgtoj.nprim; jp++) {
+            eab = cgtoi.alpha[ip] + cgtoj.alpha[jp];
+            oab = 1.0 / eab;
+            est = cgtoi.alpha[ip] * cgtoj.alpha[jp] * r2 * oab;
+            if (est > intcut) continue;
+            pre = exp(-est) * SQRT_PI3 * pow(sqrt(oab), 3);
+            for (int i = 0; i < 3; i++) {
+                rpi[i] = -vec[i] * cgtoj.alpha[jp] * oab;
+                rpj[i] = vec[i] * cgtoi.alpha[ip] * oab;
+            }
+            for (int l = 0; l <= cgtoi.ang + cgtoj.ang + 3; l++) {
+                s1d[l] = overlap_1d(l, eab);
+            }
+            cc = cgtoi.coeff[ip] * cgtoj.coeff[jp] * pre;
+            for (int mli = 0; mli < MLAO; mli++) {
+                for (int mlj = 0; mlj < MLAO; mlj++) {
+                    multipole_grad_3d(
+                        rpj, rpi, cgtoj.alpha[jp], cgtoi.alpha[ip],
+                        lx[mlj + LMAP], lx[mli + LMAP],
+                        s1d, val, dip, quad, grad, ddip, dquad
+                    );
+                    s3d[mlj][mli] += cc * val;
+                    for (int i = 0; i < 3; i++) {
+                        d3dj[i][mlj][mli] += cc * dip[i];
+                        ds3d[i][mlj][mli] += cc * grad[i];
+                        for (int j = 0; j < 3; j++) {
+                            dd3dj[i][j][mlj][mli] += cc * ddip[i][j];
+                        }
+                        for (int j = 0; j < 6; j++) {
+                            dq3dj[i][j][mlj][mli] += cc * dquad[i][j];
+                        }
+                    }
+                    for (int i = 0; i < 6; i++) {
+                        q3dj[i][mlj][mli] += cc * quad[i];
+                    }
+                }
+            }
+        }
+    }
+
+    // for (int mli = 0; mli < MLAO(cgtoi.ang); mli++) {
+    //     for (int mlj = 0; mlj < MLAO(cgtoj.ang); mlj++) {
+    //         shift_operator(
+    //             vec, s3d[mlj][mli], d3dj[:, mlj][mli], q3dj[:, mlj][mli],
+    //             ds3d[:, mlj][mli], dd3dj[:, :, mlj][mli], dq3dj[:, :, mlj][mli],
+    //             dd3di[:, :, mlj][mli], dq3di[:, :, mlj][mli]
+    //         );
+    //     }
+    // }
+
+    transform0(cgtoj.ang, cgtoi.ang, s3d, overlap);
+    transform1(cgtoj.ang, cgtoi.ang, d3dj, dpint);
+    transform1(cgtoj.ang, cgtoi.ang, q3dj, qpint);
+    transform1(cgtoj.ang, cgtoi.ang, ds3d, doverlap);
+    transform2(cgtoj.ang, cgtoi.ang, dd3dj, ddpintj);
+    transform2(cgtoj.ang, cgtoi.ang, dq3dj, dqpintj);
+    transform2(cgtoj.ang, cgtoi.ang, dd3di, ddpinti);
+    transform2(cgtoj.ang, cgtoi.ang, dq3di, dqpinti);
+
+    for (int mli = 0; mli < MSAO; mli++) {
+        for (int mlj = 0; mlj < MSAO; mlj++) {
+            tr = 0.5 * (qpint[0][mlj][mli] + qpint[2][mlj][mli] + qpint[5][mlj][mli]);
+            qpint[0][mlj][mli] = 1.5 * qpint[0][mlj][mli] - tr;
+            qpint[1][mlj][mli] = 1.5 * qpint[1][mlj][mli];
+            qpint[2][mlj][mli] = 1.5 * qpint[2][mlj][mli] - tr;
+            qpint[3][mlj][mli] = 1.5 * qpint[3][mlj][mli];
+            qpint[4][mlj][mli] = 1.5 * qpint[4][mlj][mli];
+            qpint[5][mlj][mli] = 1.5 * qpint[5][mlj][mli] - tr;
+
+            for (int i = 0; i < 3; i++) {
+                dtr[i] = dqpinti[i][0][mlj][mli] + dqpinti[i][2][mlj][mli] + dqpinti[i][5][mlj][mli];
+                dqpinti[i][0][mlj][mli] = 1.5 * dqpinti[i][0][mlj][mli] - 0.5 * dtr[i];
+                dqpinti[i][1][mlj][mli] = 1.5 * dqpinti[i][1][mlj][mli];
+                dqpinti[i][2][mlj][mli] = 1.5 * dqpinti[i][2][mlj][mli] - 0.5 * dtr[i];
+                dqpinti[i][3][mlj][mli] = 1.5 * dqpinti[i][3][mlj][mli];
+                dqpinti[i][4][mlj][mli] = 1.5 * dqpinti[i][4][mlj][mli];
+                dqpinti[i][5][mlj][mli] = 1.5 * dqpinti[i][5][mlj][mli] - 0.5 * dtr[i];
+
+                dtr[i] = dqpintj[i][0][mlj][mli] + dqpintj[i][2][mlj][mli] + dqpintj[i][5][mlj][mli];
+                dqpintj[i][0][mlj][mli] = 1.5 * dqpintj[i][0][mlj][mli] - 0.5 * dtr[i];
+                dqpintj[i][1][mlj][mli] = 1.5 * dqpintj[i][1][mlj][mli];
+                dqpintj[i][2][mlj][mli] = 1.5 * dqpintj[i][2][mlj][mli] - 0.5 * dtr[i];
+                dqpintj[i][3][mlj][mli] = 1.5 * dqpintj[i][3][mlj][mli];
+                dqpintj[i][4][mlj][mli] = 1.5 * dqpintj[i][4][mlj][mli];
+                dqpintj[i][5][mlj][mli] = 1.5 * dqpintj[i][5][mlj][mli] - 0.5 * dtr[i];
+            }
+        }
+    }
+}
+
+// __device__ 
+// void multipole_grad_cgto(
+//     const cgto_type cgtoj,
+//     const cgto_type cgtoi,
+//     const double r2, 
+//     const double vec[3],
+//     const double intcut,
+
+//     double (&overlap)[MSAO][MSAO],
+//     double (&dpint)[3][MSAO][MSAO],
+//     double (&qpint)[6][MSAO][MSAO],
+// ) {
+    
+// }

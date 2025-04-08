@@ -96,6 +96,29 @@ public:
     __device__ const T* rawData() const { return data; }
 };
 
+/*
+   type :: cgto_type
+      !> Angular momentum of this basis function
+      integer :: ang = -1
+      !> Contraction length of this basis function
+      integer :: nprim = 0
+      !> Exponent of the primitive Gaussian functions
+      real(wp) :: alpha(maxg) = 0.0_wp
+      !> Contraction coefficients of the primitive Gaussian functions,
+      !> might contain normalization
+      real(wp) :: coeff(maxg) = 0.0_wp
+   end type cgto_type
+*/
+
+#define MAXG 4
+typedef struct {
+    int ang = 0;
+    int nprim = 0;
+    double alpha[MAXG] = {0.0};
+    double coeff[MAXG] = {0.0};
+} cgto_type;
+
+
 /* type :: adjacency_list
  !> Offset index in the neighbour map
  integer, allocatable :: inl(:)
@@ -182,8 +205,43 @@ __device__ void multipole_grad_3d(
         
         double &s3d, double d3d[3], double q3d[3], double ds3d[3], 
         double dd3d[3][3], double dq3d[3][6]);
-__device__ void transform0(
-    int r, int c, const int lj, const int li, 
-    const double *cart, double *sphr);
+
+#define MSAO 5
+#define MLAO 6
+#define LMAP 1
+        
+template <size_t N, size_t M>
+__device__
+void transform2(const int lj, const int li, 
+    const double (&cart)[N][M][MLAO][MLAO], double (&sphr)[N][M][MSAO][MSAO]);
+template <size_t N>
+__device__
+void transform1(const int lj, const int li, 
+    const double (&cart)[N][MLAO][MLAO], double (&sphr)[N][MSAO][MSAO]);
+__device__
+void transform0(
+    const int lj, const int li, 
+    const double (&cart)[MLAO][MLAO], double (&sphr)[MSAO][MSAO]);
+
+// #define MSAO 3
+// template <size_t MSAO>//, size_t MLAO, size_t LMAP>
+__device__ 
+void multipole_grad_cgto(
+    const cgto_type cgtoj,
+    const cgto_type cgtoi,
+    const double r2, 
+    const double vec[3],
+    const double intcut,
+
+    double (&overlap)[MSAO][MSAO],
+    double (&dpint)[3][MSAO][MSAO],
+    double (&qpint)[6][MSAO][MSAO],
+    double (&doverlap)[3][MSAO][MSAO],
+    double (&ddpinti)[3][3][MSAO][MSAO],
+    double (&dqpinti)[3][6][MSAO][MSAO],
+    double (&ddpintj)[3][3][MSAO][MSAO],
+    double (&dqpintj)[3][6][MSAO][MSAO]
+);
+
 
 #endif // FOO_H_
