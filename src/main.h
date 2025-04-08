@@ -206,42 +206,67 @@ __device__ void multipole_grad_3d(
         double &s3d, double d3d[3], double q3d[3], double ds3d[3], 
         double dd3d[3][3], double dq3d[3][6]);
 
-#define MSAO 5
-#define MLAO 6
-#define LMAP 1
+// #define MSAO 5
+// #define MLAO 6
+// #define LMAP 1
+
+typedef struct {
+    double* at;
+    size_t R;
+    size_t C;
+} matrix;
+
+typedef struct {
+    double* at;
+    size_t R;
+    size_t C;
+    size_t W;
+} tens3;
+
+typedef struct {
+    double* at;
+    size_t R;
+    size_t C;
+    size_t W;
+    size_t H;
+} tens4;
         
-template <size_t N, size_t M>
+template <size_t N, size_t M, size_t MSAO, size_t MLAO>
 __device__
 void transform2(const int lj, const int li, 
     const double (&cart)[N][M][MLAO][MLAO], double (&sphr)[N][M][MSAO][MSAO]);
-template <size_t N>
+template <size_t N, size_t MSAO, size_t MLAO>
 __device__
 void transform1(const int lj, const int li, 
     const double (&cart)[N][MLAO][MLAO], double (&sphr)[N][MSAO][MSAO]);
+
+// template <size_t msaoj, size_t msaoi, size_t mlaoi, size_t mlaoj>
 __device__
 void transform0(
     const int lj, const int li, 
-    const double (&cart)[MLAO][MLAO], double (&sphr)[MSAO][MSAO]);
+    const matrix &cart, matrix &sphr);
 
 // #define MSAO 3
+// #define MLAO 3
 // template <size_t MSAO>//, size_t MLAO, size_t LMAP>
-__device__ 
-void multipole_grad_cgto(
-    const cgto_type cgtoj,
-    const cgto_type cgtoi,
-    const double r2, 
-    const double vec[3],
-    const double intcut,
+// template <size_t MSAO>
+// __device__ 
+// void multipole_grad_cgto(
+//     const cgto_type cgtoj,
+//     const cgto_type cgtoi,
+//     const double r2, 
+//     const double vec[3],
+//     const double intcut,
 
-    double (&overlap)[MSAO][MSAO],
-    double (&dpint)[3][MSAO][MSAO],
-    double (&qpint)[6][MSAO][MSAO],
-    double (&doverlap)[3][MSAO][MSAO],
-    double (&ddpinti)[3][3][MSAO][MSAO],
-    double (&dqpinti)[3][6][MSAO][MSAO],
-    double (&ddpintj)[3][3][MSAO][MSAO],
-    double (&dqpintj)[3][6][MSAO][MSAO]
-);
+//     double (&overlap)[MSAO][MSAO],
+//     double (&dpint)[3][MSAO][MSAO],
+//     double (&qpint)[6][MSAO][MSAO],
+//     double (&doverlap)[3][MSAO][MSAO],
+//     double (&ddpinti)[3][3][MSAO][MSAO],
+//     double (&dqpinti)[3][6][MSAO][MSAO],
+//     double (&ddpintj)[3][3][MSAO][MSAO],
+//     double (&dqpintj)[3][6][MSAO][MSAO]
+// );
 
-
+__global__ void test_call_multipole_grad_cgto();
 #endif // FOO_H_

@@ -2,7 +2,7 @@
 
 # Compiler and flags
 NVCC := nvcc
-CXXFLAGS := -O0 -std=c++20 -rdc=true
+CXXFLAGS := -O0 -std=c++20 -rdc=true --expt-relaxed-constexpr
 
 # Directories
 SRC_DIR := src

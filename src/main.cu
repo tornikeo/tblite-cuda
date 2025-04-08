@@ -621,10 +621,12 @@ end subroutine transform0
 */
 
 
+
 __device__
 void transform0(
     const int lj, const int li, 
-    const double (&cart)[MLAO][MLAO], double (&sphr)[MSAO][MSAO]
+    const matrix &cart, 
+    matrix &sphr
 ) {
     switch (li) {
         case 0:
@@ -633,16 +635,17 @@ void transform0(
                 case 0:
                 case 1:
                     // sphr = cart
-                    memcpy(sphr, cart, 3 * 6 * sizeof(double));
+                    // memcpy(sphr, cart, msaoj * msaoi * sizeof(double));
+                    memcpy( sphr.at, cart.at, cart.R*cart.C*sizeof(double));
                     break;
                 case 2:
                     // sphr(1, :) = cart(3, :) - 0.5_wp * (cart(1, :) + cart(2, :))
-                    for (int j = 0; j < MSAO; j++) {
-                        sphr[0][j] = cart[2][j] - 0.5 * (cart[0][j] + cart[1][j]);
-                        sphr[1][j] = S3 * cart[4][j];
-                        sphr[2][j] = S3 * cart[5][j];
-                        sphr[3][j] = S3_4 * (cart[0][j] - cart[1][j]);
-                        sphr[4][j] = S3 * cart[3][j];
+                    for (int i = 0; i < cart.C; i++) {
+                        sphr.at[0*sphr.C+i] = cart.at[2*cart.C+i] - 0.5 * (cart.at[0*cart.C+i] + cart.at[1*cart.C+i]);
+                        sphr.at[1*sphr.C+i] = S3 * cart.at[4*cart.C+i];
+                        sphr.at[2*sphr.C+i] = S3 * cart.at[5*cart.C+i];
+                        sphr.at[3*sphr.C+i] = S3_4 * (cart.at[0*cart.C+i] - cart.at[1*cart.C+i]);
+                        sphr.at[4*sphr.C+i] = S3 * cart.at[3*cart.C+i];
                     }
                     break;
                 case 3:
@@ -759,6 +762,8 @@ void transform0(
     }
 }
 
+
+
 // pure subroutine transform1(lj, li, cart, sphr)
 //    integer, intent(in) :: li
 //    integer, intent(in) :: lj
@@ -771,14 +776,14 @@ void transform0(
 //    end do
 // end subroutine transform1
 
-template <size_t N>
+template <size_t N, size_t MSAO, size_t MLAO>
 __device__
 void transform1(const int lj, const int li, 
     const double (&cart)[N][MLAO][MLAO], double (&sphr)[N][MSAO][MSAO]
 ) {
-    for (int i = 0; i < N; i++) {
-        transform0(lj, li, cart[i], sphr[i]);
-    }
+    // for (int i = 0; i < N; i++) {
+    //     transform0(lj, li, cart[i], sphr[i]);
+    // }
 }
 
 // pure subroutine transform2(lj, li, cart, sphr)
@@ -795,16 +800,16 @@ void transform1(const int lj, const int li,
 //    end do
 // end subroutine transform2
 
-template <size_t N, size_t M>
+template <size_t N, size_t M, size_t MSAO, size_t MLAO>
 __device__
 void transform2(const int lj, const int li, 
     const double (&cart)[N][M][MLAO][MLAO], double (&sphr)[N][M][MSAO][MSAO]
 ) {
-    for (int i = 0; i < N; i++) {
-        for (int j = 0; j < M; i++) {
-            transform0(lj, li, cart[i][j], sphr[i][j]);
-        }
-    }
+    // for (int i = 0; i < N; i++) {
+    //     for (int j = 0; j < M; i++) {
+    //         transform0(lj, li, cart[i][j], sphr[i][j]);
+    //     }
+    // }
 }
 
 
@@ -975,8 +980,21 @@ pure subroutine multipole_grad_cgto(cgtoj, cgtoi, r2, vec, intcut, overlap, dpin
 end subroutine multipole_grad_cgto
 */
 
+constexpr size_t MSAO[7] = {1, 3, 5, 7, 9, 11, 13};
+constexpr size_t MLAO[7] = {1, 3, 6, 10, 15, 21, 28};
+constexpr size_t LMAP[7] = {0, 1, 4, 10, 20, 35, 56};
+constexpr int LX[8][3] = {
+    {0,0,0}, 
+    {0,1,0},
+    {0,0,1},
+    {1,0,0},
+    {2,0,0},
+    {0,2,0},
+    {0,0,2},
+    {1,1,2},
+};
 
-
+template  <size_t msao_j, size_t msao_i>
 __device__ 
 void multipole_grad_cgto(
     const cgto_type cgtoj,
@@ -985,129 +1003,150 @@ void multipole_grad_cgto(
     const double vec[3],
     const double intcut,
 
-    double (&overlap)[MSAO][MSAO],
-    double (&dpint)[3][MSAO][MSAO],
-    double (&qpint)[6][MSAO][MSAO],
-    double (&doverlap)[3][MSAO][MSAO],
-    double (&ddpinti)[3][3][MSAO][MSAO],
-    double (&dqpinti)[3][6][MSAO][MSAO],
-    double (&ddpintj)[3][3][MSAO][MSAO],
-    double (&dqpintj)[3][6][MSAO][MSAO]
+    double (&overlap)[msao_j][msao_i],
+    double (&dpint)[3][msao_j][msao_i],
+    double (&qpint)[6][msao_j][msao_i],
+    double (&doverlap)[3][msao_j][msao_i],
+    double (&ddpinti)[3][3][msao_j][msao_i],
+    double (&dqpinti)[3][6][msao_j][msao_i],
+    double (&ddpintj)[3][3][msao_j][msao_i],
+    double (&dqpintj)[3][6][msao_j][msao_i]
 ) {
 
-    const int lx[8][3] = {
-        {0,0,0}, 
-        {0,1,0},
-        {0,0,1},
-        {1,0,0},
-        {2,0,0},
-        {0,2,0},
-        {0,0,2},
-        {1,1,2},
-    };
+    // double eab, oab, est, s1d[MAXL2 + 1], rpi[3], rpj[3], cc, val, dip[3], quad[6];
+    // double pre, grad[3], ddip[3][3], dquad[3][6], tr, dtr[3];
+    // double s3d[MLAO][MLAO] = {0.0};
+    // double d3dj[3][MLAO][MLAO] = {0.0};
+    // double q3dj[6][MLAO][MLAO] = {0.0};
+    // double ds3d[3][MLAO][MLAO] = {0.0};
+    // double dd3di[3][3][MLAO][MLAO] = {0.0};
+    // double dq3di[3][6][MLAO][MLAO] = {0.0};
+    // double dd3dj[3][3][MLAO][MLAO] = {0.0};
+    // double dq3dj[3][6][MLAO][MLAO] = {0.0};
 
-    double eab, oab, est, s1d[MAXL2 + 1], rpi[3], rpj[3], cc, val, dip[3], quad[6];
-    double pre, grad[3], ddip[3][3], dquad[3][6], tr, dtr[3];
-    double s3d[MLAO][MLAO] = {0.0};
-    double d3dj[3][MLAO][MLAO] = {0.0};
-    double q3dj[6][MLAO][MLAO] = {0.0};
-    double ds3d[3][MLAO][MLAO] = {0.0};
-    double dd3di[3][3][MLAO][MLAO] = {0.0};
-    double dq3di[3][6][MLAO][MLAO] = {0.0};
-    double dd3dj[3][3][MLAO][MLAO] = {0.0};
-    double dq3dj[3][6][MLAO][MLAO] = {0.0};
-
-    for (int ip = 0; ip < cgtoi.nprim; ip++) {
-        for (int jp = 0; jp < cgtoj.nprim; jp++) {
-            eab = cgtoi.alpha[ip] + cgtoj.alpha[jp];
-            oab = 1.0 / eab;
-            est = cgtoi.alpha[ip] * cgtoj.alpha[jp] * r2 * oab;
-            if (est > intcut) continue;
-            pre = exp(-est) * SQRT_PI3 * pow(sqrt(oab), 3);
-            for (int i = 0; i < 3; i++) {
-                rpi[i] = -vec[i] * cgtoj.alpha[jp] * oab;
-                rpj[i] = vec[i] * cgtoi.alpha[ip] * oab;
-            }
-            for (int l = 0; l <= cgtoi.ang + cgtoj.ang + 3; l++) {
-                s1d[l] = overlap_1d(l, eab);
-            }
-            cc = cgtoi.coeff[ip] * cgtoj.coeff[jp] * pre;
-            for (int mli = 0; mli < MLAO; mli++) {
-                for (int mlj = 0; mlj < MLAO; mlj++) {
-                    multipole_grad_3d(
-                        rpj, rpi, cgtoj.alpha[jp], cgtoi.alpha[ip],
-                        lx[mlj + LMAP], lx[mli + LMAP],
-                        s1d, val, dip, quad, grad, ddip, dquad
-                    );
-                    s3d[mlj][mli] += cc * val;
-                    for (int i = 0; i < 3; i++) {
-                        d3dj[i][mlj][mli] += cc * dip[i];
-                        ds3d[i][mlj][mli] += cc * grad[i];
-                        for (int j = 0; j < 3; j++) {
-                            dd3dj[i][j][mlj][mli] += cc * ddip[i][j];
-                        }
-                        for (int j = 0; j < 6; j++) {
-                            dq3dj[i][j][mlj][mli] += cc * dquad[i][j];
-                        }
-                    }
-                    for (int i = 0; i < 6; i++) {
-                        q3dj[i][mlj][mli] += cc * quad[i];
-                    }
-                }
-            }
-        }
-    }
-
-    // for (int mli = 0; mli < MLAO(cgtoi.ang); mli++) {
-    //     for (int mlj = 0; mlj < MLAO(cgtoj.ang); mlj++) {
-    //         shift_operator(
-    //             vec, s3d[mlj][mli], d3dj[:, mlj][mli], q3dj[:, mlj][mli],
-    //             ds3d[:, mlj][mli], dd3dj[:, :, mlj][mli], dq3dj[:, :, mlj][mli],
-    //             dd3di[:, :, mlj][mli], dq3di[:, :, mlj][mli]
-    //         );
+    // for (int ip = 0; ip < cgtoi.nprim; ip++) {
+    //     for (int jp = 0; jp < cgtoj.nprim; jp++) {
+    //         eab = cgtoi.alpha[ip] + cgtoj.alpha[jp];
+    //         oab = 1.0 / eab;
+    //         est = cgtoi.alpha[ip] * cgtoj.alpha[jp] * r2 * oab;
+    //         if (est > intcut) continue;
+    //         pre = exp(-est) * SQRT_PI3 * pow(sqrt(oab), 3);
+    //         for (int i = 0; i < 3; i++) {
+    //             rpi[i] = -vec[i] * cgtoj.alpha[jp] * oab;
+    //             rpj[i] = vec[i] * cgtoi.alpha[ip] * oab;
+    //         }
+    //         for (int l = 0; l <= cgtoi.ang + cgtoj.ang + 3; l++) {
+    //             s1d[l] = overlap_1d(l, eab);
+    //         }
+    //         cc = cgtoi.coeff[ip] * cgtoj.coeff[jp] * pre;
+    //         for (int mli = 0; mli < MLAO; mli++) {
+    //             for (int mlj = 0; mlj < MLAO; mlj++) {
+    //                 multipole_grad_3d(
+    //                     rpj, rpi, cgtoj.alpha[jp], cgtoi.alpha[ip],
+    //                     lx[mlj + lmap[cgtoj.ang]], lx[mli + lmap[cgtoj.ang]],
+    //                     s1d, val, dip, quad, grad, ddip, dquad
+    //                 );
+    //                 s3d[mlj][mli] += cc * val;
+    //                 for (int i = 0; i < 3; i++) {
+    //                     d3dj[i][mlj][mli] += cc * dip[i];
+    //                     ds3d[i][mlj][mli] += cc * grad[i];
+    //                     for (int j = 0; j < 3; j++) {
+    //                         dd3dj[i][j][mlj][mli] += cc * ddip[i][j];
+    //                     }
+    //                     for (int j = 0; j < 6; j++) {
+    //                         dq3dj[i][j][mlj][mli] += cc * dquad[i][j];
+    //                     }
+    //                 }
+    //                 for (int i = 0; i < 6; i++) {
+    //                     q3dj[i][mlj][mli] += cc * quad[i];
+    //                 }
+    //             }
+    //         }
     //     }
     // }
 
-    transform0(cgtoj.ang, cgtoi.ang, s3d, overlap);
-    transform1(cgtoj.ang, cgtoi.ang, d3dj, dpint);
-    transform1(cgtoj.ang, cgtoi.ang, q3dj, qpint);
-    transform1(cgtoj.ang, cgtoi.ang, ds3d, doverlap);
-    transform2(cgtoj.ang, cgtoi.ang, dd3dj, ddpintj);
-    transform2(cgtoj.ang, cgtoi.ang, dq3dj, dqpintj);
-    transform2(cgtoj.ang, cgtoi.ang, dd3di, ddpinti);
-    transform2(cgtoj.ang, cgtoi.ang, dq3di, dqpinti);
+    // // for (int mli = 0; mli < MLAO(cgtoi.ang); mli++) {
+    // //     for (int mlj = 0; mlj < MLAO(cgtoj.ang); mlj++) {
+    // //         shift_operator(
+    // //             vec, s3d[mlj][mli], d3dj[:, mlj][mli], q3dj[:, mlj][mli],
+    // //             ds3d[:, mlj][mli], dd3dj[:, :, mlj][mli], dq3dj[:, :, mlj][mli],
+    // //             dd3di[:, :, mlj][mli], dq3di[:, :, mlj][mli]
+    // //         );
+    // //     }
+    // // }
 
-    for (int mli = 0; mli < MSAO; mli++) {
-        for (int mlj = 0; mlj < MSAO; mlj++) {
-            tr = 0.5 * (qpint[0][mlj][mli] + qpint[2][mlj][mli] + qpint[5][mlj][mli]);
-            qpint[0][mlj][mli] = 1.5 * qpint[0][mlj][mli] - tr;
-            qpint[1][mlj][mli] = 1.5 * qpint[1][mlj][mli];
-            qpint[2][mlj][mli] = 1.5 * qpint[2][mlj][mli] - tr;
-            qpint[3][mlj][mli] = 1.5 * qpint[3][mlj][mli];
-            qpint[4][mlj][mli] = 1.5 * qpint[4][mlj][mli];
-            qpint[5][mlj][mli] = 1.5 * qpint[5][mlj][mli] - tr;
+    // transform0(cgtoj.ang, cgtoi.ang, s3d, overlap);
+    // transform1(cgtoj.ang, cgtoi.ang, d3dj, dpint);
+    // transform1(cgtoj.ang, cgtoi.ang, q3dj, qpint);
+    // transform1(cgtoj.ang, cgtoi.ang, ds3d, doverlap);
+    // transform2(cgtoj.ang, cgtoi.ang, dd3dj, ddpintj);
+    // transform2(cgtoj.ang, cgtoi.ang, dq3dj, dqpintj);
+    // transform2(cgtoj.ang, cgtoi.ang, dd3di, ddpinti);
+    // transform2(cgtoj.ang, cgtoi.ang, dq3di, dqpinti);
 
-            for (int i = 0; i < 3; i++) {
-                dtr[i] = dqpinti[i][0][mlj][mli] + dqpinti[i][2][mlj][mli] + dqpinti[i][5][mlj][mli];
-                dqpinti[i][0][mlj][mli] = 1.5 * dqpinti[i][0][mlj][mli] - 0.5 * dtr[i];
-                dqpinti[i][1][mlj][mli] = 1.5 * dqpinti[i][1][mlj][mli];
-                dqpinti[i][2][mlj][mli] = 1.5 * dqpinti[i][2][mlj][mli] - 0.5 * dtr[i];
-                dqpinti[i][3][mlj][mli] = 1.5 * dqpinti[i][3][mlj][mli];
-                dqpinti[i][4][mlj][mli] = 1.5 * dqpinti[i][4][mlj][mli];
-                dqpinti[i][5][mlj][mli] = 1.5 * dqpinti[i][5][mlj][mli] - 0.5 * dtr[i];
+    // for (int mli = 0; mli < MSAO; mli++) {
+    //     for (int mlj = 0; mlj < MSAO; mlj++) {
+    //         tr = 0.5 * (qpint[0][mlj][mli] + qpint[2][mlj][mli] + qpint[5][mlj][mli]);
+    //         qpint[0][mlj][mli] = 1.5 * qpint[0][mlj][mli] - tr;
+    //         qpint[1][mlj][mli] = 1.5 * qpint[1][mlj][mli];
+    //         qpint[2][mlj][mli] = 1.5 * qpint[2][mlj][mli] - tr;
+    //         qpint[3][mlj][mli] = 1.5 * qpint[3][mlj][mli];
+    //         qpint[4][mlj][mli] = 1.5 * qpint[4][mlj][mli];
+    //         qpint[5][mlj][mli] = 1.5 * qpint[5][mlj][mli] - tr;
 
-                dtr[i] = dqpintj[i][0][mlj][mli] + dqpintj[i][2][mlj][mli] + dqpintj[i][5][mlj][mli];
-                dqpintj[i][0][mlj][mli] = 1.5 * dqpintj[i][0][mlj][mli] - 0.5 * dtr[i];
-                dqpintj[i][1][mlj][mli] = 1.5 * dqpintj[i][1][mlj][mli];
-                dqpintj[i][2][mlj][mli] = 1.5 * dqpintj[i][2][mlj][mli] - 0.5 * dtr[i];
-                dqpintj[i][3][mlj][mli] = 1.5 * dqpintj[i][3][mlj][mli];
-                dqpintj[i][4][mlj][mli] = 1.5 * dqpintj[i][4][mlj][mli];
-                dqpintj[i][5][mlj][mli] = 1.5 * dqpintj[i][5][mlj][mli] - 0.5 * dtr[i];
-            }
-        }
-    }
+    //         for (int i = 0; i < 3; i++) {
+    //             dtr[i] = dqpinti[i][0][mlj][mli] + dqpinti[i][2][mlj][mli] + dqpinti[i][5][mlj][mli];
+    //             dqpinti[i][0][mlj][mli] = 1.5 * dqpinti[i][0][mlj][mli] - 0.5 * dtr[i];
+    //             dqpinti[i][1][mlj][mli] = 1.5 * dqpinti[i][1][mlj][mli];
+    //             dqpinti[i][2][mlj][mli] = 1.5 * dqpinti[i][2][mlj][mli] - 0.5 * dtr[i];
+    //             dqpinti[i][3][mlj][mli] = 1.5 * dqpinti[i][3][mlj][mli];
+    //             dqpinti[i][4][mlj][mli] = 1.5 * dqpinti[i][4][mlj][mli];
+    //             dqpinti[i][5][mlj][mli] = 1.5 * dqpinti[i][5][mlj][mli] - 0.5 * dtr[i];
+
+    //             dtr[i] = dqpintj[i][0][mlj][mli] + dqpintj[i][2][mlj][mli] + dqpintj[i][5][mlj][mli];
+    //             dqpintj[i][0][mlj][mli] = 1.5 * dqpintj[i][0][mlj][mli] - 0.5 * dtr[i];
+    //             dqpintj[i][1][mlj][mli] = 1.5 * dqpintj[i][1][mlj][mli];
+    //             dqpintj[i][2][mlj][mli] = 1.5 * dqpintj[i][2][mlj][mli] - 0.5 * dtr[i];
+    //             dqpintj[i][3][mlj][mli] = 1.5 * dqpintj[i][3][mlj][mli];
+    //             dqpintj[i][4][mlj][mli] = 1.5 * dqpintj[i][4][mlj][mli];
+    //             dqpintj[i][5][mlj][mli] = 1.5 * dqpintj[i][5][mlj][mli] - 0.5 * dtr[i];
+    //         }
+    //     }
+    // }
 }
 
+
+__global__
+void test_call_multipole_grad_cgto(void) {
+    // Example test call for multipole_grad_cgto
+    const int MSAO = 3;
+    // const int MLAO = 3;
+    const int LMAP = 1;
+
+    cgto_type cgtoj = {/* Initialize with appropriate values */};
+    cgto_type cgtoi = {/* Initialize with appropriate values */};
+    double r2 = 1.0;
+    double vec[3] = {0.1, 0.2, 0.3};
+    double intcut = 1e-6;
+
+    double overlap[MSAO][MSAO] = {0.0};
+    double dpint[3][MSAO][MSAO] = {0.0};
+    double qpint[6][MSAO][MSAO] = {0.0};
+    double doverlap[3][MSAO][MSAO] = {0.0};
+    double ddpinti[3][3][MSAO][MSAO] = {0.0};
+    double dqpinti[3][6][MSAO][MSAO] = {0.0};
+    double ddpintj[3][3][MSAO][MSAO] = {0.0};
+    double dqpintj[3][6][MSAO][MSAO] = {0.0};
+
+    multipole_grad_cgto(
+        cgtoj, cgtoi, 
+        r2, vec, intcut,
+        overlap, dpint, qpint, doverlap, ddpinti, dqpinti, ddpintj, dqpintj
+    );
+
+    // Print or validate results as needed
+    printf("Test call completed.\n");
+}
 // __device__ 
 // void multipole_grad_cgto(
 //     const cgto_type cgtoj,
