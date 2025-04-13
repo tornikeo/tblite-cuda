@@ -1,31 +1,13 @@
-# CUDA Makefile
+bin/main: bin/h0.o
+	mkdir -p bin
+	nvfortran src/main.f90 bin/type.o bin/h0.o -o bin/main
 
-# Compiler and flags
-NVCC := nvcc
-CXXFLAGS := -O0 -std=c++20 -rdc=true --expt-relaxed-constexpr
+bin/type.o: src/type.f90
+	nvfortran src/type.f90 -o bin/type.o -c
 
-# Directories
-SRC_DIR := src
-OBJ_DIR := obj
-BIN_DIR := bin
+bin/h0.o: bin/type.o
+	nvfortran src/h0.f90 -o bin/h0.o -c
 
-# Files
-TARGET := $(BIN_DIR)/main
-SRCS := $(wildcard $(SRC_DIR)/*.cu)
-OBJS := $(patsubst $(SRC_DIR)/%.cu, $(OBJ_DIR)/%.o, $(SRCS))
-
-# Rules
-all: $(TARGET)
-
-$(TARGET): $(OBJS)
-	mkdir -p $(BIN_DIR)
-	$(NVCC) $(CXXFLAGS) -o $@ $^
-
-$(OBJ_DIR)/%.o: $(SRC_DIR)/%.cu
-	mkdir -p $(OBJ_DIR)
-	$(NVCC) $(CXXFLAGS) -c $< -o $@
-
-clean:
-	rm -rf $(OBJ_DIR) $(BIN_DIR)
-
-.PHONY: all clean
+clean: 
+	rm -rf bin
+	rm -rf obj
