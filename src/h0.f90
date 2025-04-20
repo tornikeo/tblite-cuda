@@ -1,6 +1,6 @@
 module tblite_integral_multipole
   use tblite_basis_type, only : wp, basis_type, cgto_type
-
+  use cuf
   integer, parameter :: maxl = 6
   integer, parameter :: maxl2 = maxl*2
   integer, parameter :: msao(0:maxl) = [1, 3, 5, 7, 9, 11, 13]
@@ -9,7 +9,6 @@ module tblite_integral_multipole
   real(wp), parameter :: pi = 3.1415926535897932384626433832795029_wp
   real(wp), parameter :: sqrtpi = sqrt(pi)
   real(wp), parameter :: sqrtpi3 = sqrtpi**3
-
 
   real(wp), parameter :: s3 = sqrt(3.0_wp)
   real(wp), parameter :: s3_4 = s3 * 0.5_wp
@@ -101,7 +100,7 @@ module tblite_integral_multipole
 
 contains
 
-
+  attributes(device) &
   pure subroutine shift_operator(vec, s, di, qi, ds, ddi, dqi, ddj, dqj)
     real(wp),intent(in) :: vec(:)
     real(wp),intent(in) :: s
@@ -143,7 +142,7 @@ contains
 
   end subroutine shift_operator
 
-
+  attributes(device) &
   pure subroutine horizontal_shift(ae, l, cfs)
     integer, intent(in) :: l
     real(wp), intent(in) :: ae
@@ -167,7 +166,7 @@ contains
         cfs(4)=cfs(4)+ 4*ae*cfs(5)
     end select
   end subroutine horizontal_shift
-
+  attributes(device) &
   pure subroutine form_product(a, b, la, lb, d)
     integer, intent(in) :: la, lb
     real(wp), intent(in) :: a(*), b(*)
@@ -257,7 +256,7 @@ contains
     d(9)=a(5)*b(5)
 
   end subroutine form_product
-
+  attributes(device) &
   elemental function overlap_1d(moment, alpha) result(overlap)
     integer, intent(in) :: moment
     real(wp), intent(in) :: alpha
@@ -272,7 +271,7 @@ contains
     end if
   end function overlap_1d
 
-
+  attributes(device) &
   pure subroutine multipole_grad_3d(rpj, rpi, aj, ai, lj, li, s1d, s3d, d3d, q3d, &
         & ds3d, dd3d, dq3d)
     real(wp), intent(in) :: rpi(3)
@@ -368,7 +367,7 @@ contains
     dq3d(3, 6) = v1d(1, 1) * v1d(2, 1) * g1d(3, 3)
 
   end subroutine multipole_grad_3d
-
+  attributes(device) &
   pure subroutine transform0(lj, li, cart, sphr)
     integer, intent(in) :: li
     integer, intent(in) :: lj
@@ -389,87 +388,87 @@ contains
           sphr(3, :) = s3 * cart(6, :)
           sphr(4, :) = s3_4 * (cart(1, :) - cart(2, :))
           sphr(5, :) = s3 * cart(4, :)
-      case(3)
-          sphr = matmul(ftrafo, cart)
-      case(4)
-          sphr = matmul(gtrafo, cart)
+      ! case(3)
+      !     sphr = matmul(ftrafo, cart)
+      ! case(4)
+      !     sphr = matmul(gtrafo, cart)
       case default
-          error stop "[Fatal] Moments higher than g are not supported"
+          error stop !"[Fatal] Moments higher than g are not supported"
       end select
 
-    case(2)
-      select case(lj)
-      case(0, 1)
-          ! sphr = matmul(cart, transpose(dtrafo))
-          sphr(:, 1) = cart(:, 3) - 0.5_wp * (cart(:, 1) + cart(:, 2))
-          sphr(:, 2) = s3 * cart(:, 5)
-          sphr(:, 3) = s3 * cart(:, 6)
-          sphr(:, 4) = s3_4 * (cart(:, 1) - cart(:, 2))
-          sphr(:, 5) = s3 * cart(:, 4)
-      case(2)
-          ! sphr = matmul(dtrafo, matmul(cart, transpose(dtrafo)))
-          sphr(1, 1) = cart(3, 3) &
-            & - 0.5_wp * (cart(3, 1) + cart(3, 2) + cart(1, 3) + cart(2, 3)) &
-            & + 0.25_wp * (cart(1, 1) + cart(1, 2) + cart(2, 1) + cart(2, 2))
-          sphr([2, 3, 5], 1) = s3 * cart([5, 6, 4], 3) &
-            & - s3_4 * (cart([5, 6, 4], 1) + cart([5, 6, 4], 2))
-          sphr(4, 1) = s3_4 * (cart(1, 3) - cart(2, 3)) &
-            & - s3 * 0.25_wp * (cart(1, 1) - cart(2, 1) + cart(1, 2) - cart(2, 2))
-          sphr(1, 2) = s3 * cart(3, 5) - s3_4 * (cart(1, 5) + cart(2, 5))
-          sphr([2, 3, 5], 2) = 3 * cart([5, 6, 4], 5)
-          sphr(4, 2) = 1.5_wp * (cart(1, 5) - cart(2, 5))
-          sphr(1, 3) = s3 * cart(3, 6) - s3_4 * (cart(1, 6) + cart(2, 6))
-          sphr([2, 3, 5], 3) = 3 * cart([5, 6, 4], 6)
-          sphr(4, 3) = 1.5_wp * (cart(1, 6) - cart(2, 6))
-          sphr(1, 4) = s3_4 * (cart(3, 1) - cart(3, 2)) &
-            & - s3 * 0.25_wp * (cart(1, 1) - cart(1, 2) + cart(2, 1) - cart(2, 2))
-          sphr([2, 3, 5], 4) = 1.5_wp * (cart([5, 6, 4], 1) - cart([5, 6, 4], 2))
-          sphr(4, 4) = 0.75_wp * (cart(1, 1) - cart(2, 1) - cart(1, 2) + cart(2, 2))
-          sphr(1, 5) = s3 * cart(3, 4) - s3_4 * (cart(1, 4) + cart(2, 4))
-          sphr([2, 3, 5], 5) = 3 * cart([5, 6, 4], 4)
-          sphr(4, 5) = 1.5_wp * (cart(1, 4) - cart(2, 4))
-      case(3)
-          sphr = matmul(ftrafo, matmul(cart, transpose(dtrafo)))
-      case(4)
-          sphr = matmul(gtrafo, matmul(cart, transpose(dtrafo)))
-      case default
-          error stop "[Fatal] Moments higher than g are not supported"
-      end select
+    ! case(2)
+    !   select case(lj)
+    !   case(0, 1)
+    !       ! sphr = matmul(cart, transpose(dtrafo))
+    !       sphr(:, 1) = cart(:, 3) - 0.5_wp * (cart(:, 1) + cart(:, 2))
+    !       sphr(:, 2) = s3 * cart(:, 5)
+    !       sphr(:, 3) = s3 * cart(:, 6)
+    !       sphr(:, 4) = s3_4 * (cart(:, 1) - cart(:, 2))
+    !       sphr(:, 5) = s3 * cart(:, 4)
+    !   case(2)
+    !       ! sphr = matmul(dtrafo, matmul(cart, transpose(dtrafo)))
+    !       sphr(1, 1) = cart(3, 3) &
+    !         & - 0.5_wp * (cart(3, 1) + cart(3, 2) + cart(1, 3) + cart(2, 3)) &
+    !         & + 0.25_wp * (cart(1, 1) + cart(1, 2) + cart(2, 1) + cart(2, 2))
+    !       sphr([2, 3, 5], 1) = s3 * cart([5, 6, 4], 3) &
+    !         & - s3_4 * (cart([5, 6, 4], 1) + cart([5, 6, 4], 2))
+    !       sphr(4, 1) = s3_4 * (cart(1, 3) - cart(2, 3)) &
+    !         & - s3 * 0.25_wp * (cart(1, 1) - cart(2, 1) + cart(1, 2) - cart(2, 2))
+    !       sphr(1, 2) = s3 * cart(3, 5) - s3_4 * (cart(1, 5) + cart(2, 5))
+    !       sphr([2, 3, 5], 2) = 3 * cart([5, 6, 4], 5)
+    !       sphr(4, 2) = 1.5_wp * (cart(1, 5) - cart(2, 5))
+    !       sphr(1, 3) = s3 * cart(3, 6) - s3_4 * (cart(1, 6) + cart(2, 6))
+    !       sphr([2, 3, 5], 3) = 3 * cart([5, 6, 4], 6)
+    !       sphr(4, 3) = 1.5_wp * (cart(1, 6) - cart(2, 6))
+    !       sphr(1, 4) = s3_4 * (cart(3, 1) - cart(3, 2)) &
+    !         & - s3 * 0.25_wp * (cart(1, 1) - cart(1, 2) + cart(2, 1) - cart(2, 2))
+    !       sphr([2, 3, 5], 4) = 1.5_wp * (cart([5, 6, 4], 1) - cart([5, 6, 4], 2))
+    !       sphr(4, 4) = 0.75_wp * (cart(1, 1) - cart(2, 1) - cart(1, 2) + cart(2, 2))
+    !       sphr(1, 5) = s3 * cart(3, 4) - s3_4 * (cart(1, 4) + cart(2, 4))
+    !       sphr([2, 3, 5], 5) = 3 * cart([5, 6, 4], 4)
+    !       sphr(4, 5) = 1.5_wp * (cart(1, 4) - cart(2, 4))
+    !   case(3)
+    !       sphr = matmul(ftrafo, matmul(cart, transpose(dtrafo)))
+    !   case(4)
+    !       sphr = matmul(gtrafo, matmul(cart, transpose(dtrafo)))
+    !   case default
+    !       error stop !"[Fatal] Moments higher than g are not supported"
+    !   end select
 
-    case(3)
-      select case(lj)
-      case(0, 1)
-          sphr = matmul(cart, transpose(ftrafo))
-      case(2)
-          sphr = matmul(dtrafo, matmul(cart, transpose(ftrafo)))
-      case(3)
-          sphr = matmul(ftrafo, matmul(cart, transpose(ftrafo)))
-      case(4)
-          sphr = matmul(gtrafo, matmul(cart, transpose(ftrafo)))
-      case default
-          error stop "[Fatal] Moments higher than g are not supported"
-      end select
+    ! case(3)
+    !   select case(lj)
+    !   case(0, 1)
+    !       sphr = matmul(cart, transpose(ftrafo))
+    !   case(2)
+    !       sphr = matmul(dtrafo, matmul(cart, transpose(ftrafo)))
+    !   case(3)
+    !       sphr = matmul(ftrafo, matmul(cart, transpose(ftrafo)))
+    !   case(4)
+    !       sphr = matmul(gtrafo, matmul(cart, transpose(ftrafo)))
+    !   case default
+    !       error stop !"[Fatal] Moments higher than g are not supported"
+    !   end select
 
-    case(4)
-      select case(lj)
-      case(0, 1)
-          sphr = matmul(cart, transpose(gtrafo))
-      case(2)
-          sphr = matmul(dtrafo, matmul(cart, transpose(gtrafo)))
-      case(3)
-          sphr = matmul(ftrafo, matmul(cart, transpose(gtrafo)))
-      case(4)
-          sphr = matmul(gtrafo, matmul(cart, transpose(gtrafo)))
-      case default
-          error stop "[Fatal] Moments higher than g are not supported"
-      end select
+    ! case(4)
+    !   select case(lj)
+    !   case(0, 1)
+    !       sphr = matmul(cart, transpose(gtrafo))
+    !   case(2)
+    !       sphr = matmul(dtrafo, matmul(cart, transpose(gtrafo)))
+    !   case(3)
+    !       sphr = matmul(ftrafo, matmul(cart, transpose(gtrafo)))
+    !   case(4)
+    !       sphr = matmul(gtrafo, matmul(cart, transpose(gtrafo)))
+    !   case default
+    !       error stop !"[Fatal] Moments higher than g are not supported"
+    !   end select
 
     case default
-      error stop "[Fatal] Moments higher than g are not supported"
+      error stop !"[Fatal] Moments higher than g are not supported"
     end select
 
   end subroutine transform0
-
+  attributes(device) &
   pure subroutine transform1(lj, li, cart, sphr)
     integer, intent(in) :: li
     integer, intent(in) :: lj
@@ -481,7 +480,7 @@ contains
       call transform0(lj, li, cart(k, :, :), sphr(k, :, :))
     end do
   end subroutine transform1
-
+  attributes(device) &
   pure subroutine transform2(lj, li, cart, sphr)
     integer, intent(in) :: li
     integer, intent(in) :: lj
@@ -496,7 +495,7 @@ contains
     end do
   end subroutine transform2
 
-
+  attributes(global) &
   pure subroutine multipole_grad_cgto(cgtoj, cgtoi, r2, vec, intcut, overlap, dpint, qpint, &
         & doverlap, ddpintj, dqpintj, ddpinti, dqpinti)
    !> Description of contracted Gaussian function on center i

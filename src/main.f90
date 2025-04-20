@@ -1,15 +1,35 @@
 program main
   use tblite_integral_multipole, only: multipole_grad_cgto
   use tblite_basis_type, only: cgto_type, wp
+  use kernel, only: test
+  use cudafor
   implicit none
 
-  type(cgto_type) :: cgtoi, cgtoj
+  type(cgto_type), device :: cgtoi, cgtoj
   real(wp) :: r2, intcut
-  real(wp), dimension(3) :: vec
-  real(wp), allocatable :: overlap(:,:), dpint(:,:,:), qpint(:,:,:)
-  real(wp), allocatable :: doverlap(:,:,:), ddpinti(:,:,:,:), dqpinti(:,:,:,:)
-  real(wp), allocatable :: ddpintj(:,:,:,:), dqpintj(:,:,:,:)
+  real(wp), dimension(3), device :: vec
+  real(wp), allocatable, device :: overlap(:,:), dpint(:,:,:), qpint(:,:,:)
+  real(wp), allocatable, device :: doverlap(:,:,:), ddpinti(:,:,:,:), dqpinti(:,:,:,:)
+  real(wp), allocatable, device :: ddpintj(:,:,:,:), dqpintj(:,:,:,:)
   integer :: msao_i, msao_j
+
+  ! integer :: i
+  ! integer, parameter :: n = 100
+  ! integer, allocatable, device :: iarr(:)
+  ! integer, allocatable :: iarr_h(:)
+
+  ! allocate(iarr(n))
+  ! allocate(iarr_h(n))
+
+  ! iarr_h(:) = 0
+  ! call test<<<1,n>>>(iarr)
+  ! iarr_h = iarr
+
+  ! print*, &
+  ! "Errors: ", count(iarr_h.ne.(/ (i, i=1,n) /))
+  
+  ! print*, iarr_h
+  ! deallocate(iarr)
 
   ! Initialize dummy data
   cgtoi%ang = 1
@@ -39,7 +59,7 @@ program main
   allocate(dqpintj(3, 6, msao_j, msao_i))
 
   ! Call the subroutine
-  call multipole_grad_cgto(cgtoj, cgtoi, r2, vec, intcut, overlap, dpint, qpint, &
+  call <<< 1,1 >>> multipole_grad_cgto(cgtoj, cgtoi, r2, vec, intcut, overlap, dpint, qpint, &
        & doverlap, ddpintj, dqpintj, ddpinti, dqpinti)
 
   ! Print some results
