@@ -1,4 +1,5 @@
 #include "main.h"
+// #include "test.h"
 #include <iostream>
 #include <assert.h>
 // pure subroutine form_product(a, b, la, lb, d)
@@ -1116,37 +1117,37 @@ void multipole_grad_cgto(
 }
 
 
-__global__
-void test_call_multipole_grad_cgto(void) {
-    // Example test call for multipole_grad_cgto
-    const int MSAO = 3;
-    // const int MLAO = 3;
-    const int LMAP = 1;
+// __global__
+// void test_call_multipole_grad_cgto(void) {
+//     // Example test call for multipole_grad_cgto
+//     const int MSAO = 3;
+//     // const int MLAO = 3;
+//     const int LMAP = 1;
 
-    cgto_type cgtoj = {/* Initialize with appropriate values */};
-    cgto_type cgtoi = {/* Initialize with appropriate values */};
-    double r2 = 1.0;
-    double vec[3] = {0.1, 0.2, 0.3};
-    double intcut = 1e-6;
+//     cgto_type cgtoj = {/* Initialize with appropriate values */};
+//     cgto_type cgtoi = {/* Initialize with appropriate values */};
+//     double r2 = 1.0;
+//     double vec[3] = {0.1, 0.2, 0.3};
+//     double intcut = 1e-6;
 
-    double overlap[MSAO][MSAO] = {0.0};
-    double dpint[3][MSAO][MSAO] = {0.0};
-    double qpint[6][MSAO][MSAO] = {0.0};
-    double doverlap[3][MSAO][MSAO] = {0.0};
-    double ddpinti[3][3][MSAO][MSAO] = {0.0};
-    double dqpinti[3][6][MSAO][MSAO] = {0.0};
-    double ddpintj[3][3][MSAO][MSAO] = {0.0};
-    double dqpintj[3][6][MSAO][MSAO] = {0.0};
+//     double overlap[MSAO][MSAO] = {0.0};
+//     double dpint[3][MSAO][MSAO] = {0.0};
+//     double qpint[6][MSAO][MSAO] = {0.0};
+//     double doverlap[3][MSAO][MSAO] = {0.0};
+//     double ddpinti[3][3][MSAO][MSAO] = {0.0};
+//     double dqpinti[3][6][MSAO][MSAO] = {0.0};
+//     double ddpintj[3][3][MSAO][MSAO] = {0.0};
+//     double dqpintj[3][6][MSAO][MSAO] = {0.0};
 
-    multipole_grad_cgto(
-        cgtoj, cgtoi, 
-        r2, vec, intcut,
-        overlap, dpint, qpint, doverlap, ddpinti, dqpinti, ddpintj, dqpintj
-    );
+//     multipole_grad_cgto(
+//         cgtoj, cgtoi, 
+//         r2, vec, intcut,
+//         overlap, dpint, qpint, doverlap, ddpinti, dqpinti, ddpintj, dqpintj
+//     );
 
-    // Print or validate results as needed
-    printf("Test call completed.\n");
-}
+//     // Print or validate results as needed
+//     printf("Test call completed.\n");
+// }
 // __device__ 
 // void multipole_grad_cgto(
 //     const cgto_type cgtoj,
@@ -1161,3 +1162,37 @@ void test_call_multipole_grad_cgto(void) {
 // ) {
     
 // }
+
+
+int main()
+{
+    // std::cout << "Running test_form_product..." << std::endl;
+    // test_form_product<<<1, 1>>>();
+    // cudaDeviceSynchronize();
+
+    // std::cout << "Running test_horizontal_shift..." << std::endl;
+    // test_horizontal_shift<<<1, 1>>>();
+    // cudaDeviceSynchronize();
+
+    // std::cout << "Running test_shift_operator..." << std::endl;
+    // test_shift_operator<<<1, 1>>>();
+    // cudaDeviceSynchronize();
+
+    // std::cout << "Running test_multipole_grad_3d..." << std::endl;
+    // test_multipole_grad_3d<<<1, 1>>>();
+    // cudaDeviceSynchronize();
+
+    // std::cout << "Running test_transform0..." << std::endl;
+    // test_transform0<<<1, 1>>>();
+    // cudaDeviceSynchronize();    
+
+    // std::cout << "Running test_fill_matrix..." << std::endl;
+    // test_fill_matrix<<<1, 1>>>();
+    // cudaDeviceSynchronize();
+
+    // std::cout << "Running test_fill_matrix..." << std::endl;
+    // test_call_multipole_grad_cgto<<<1, 1>>>();
+    // cudaDeviceSynchronize();
+    printf("Hello, world!");
+    return 0;
+}

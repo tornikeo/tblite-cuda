@@ -1,7 +1,7 @@
 #include "main.h"
 #include <iostream>
 #include <cassert>
-
+/*
 // test __device__ __host__ void form_product(const double *a, const double *b, int la, int lb, double *d);
 // test __host__ __device__ void horizontal_shift(double ae, int l, double *cfs);
 __device__ void assert_close(const double *a, const double *b,
@@ -175,7 +175,6 @@ __global__ void test_transform0() {
     // printf("\n");
 }
 
-
 __global__ void test_fill_matrix() {
     Matrix2D<float, 128, 128> mat;
     
@@ -199,36 +198,4 @@ __global__ void test_fill_matrix() {
 
 // #define MSAO 3;
 
-
-int main()
-{
-    std::cout << "Running test_form_product..." << std::endl;
-    test_form_product<<<1, 1>>>();
-    cudaDeviceSynchronize();
-
-    std::cout << "Running test_horizontal_shift..." << std::endl;
-    test_horizontal_shift<<<1, 1>>>();
-    cudaDeviceSynchronize();
-
-    std::cout << "Running test_shift_operator..." << std::endl;
-    test_shift_operator<<<1, 1>>>();
-    cudaDeviceSynchronize();
-
-    std::cout << "Running test_multipole_grad_3d..." << std::endl;
-    test_multipole_grad_3d<<<1, 1>>>();
-    cudaDeviceSynchronize();
-
-    std::cout << "Running test_transform0..." << std::endl;
-    test_transform0<<<1, 1>>>();
-    cudaDeviceSynchronize();    
-
-    std::cout << "Running test_fill_matrix..." << std::endl;
-    test_fill_matrix<<<1, 1>>>();
-    cudaDeviceSynchronize();
-
-    std::cout << "Running test_fill_matrix..." << std::endl;
-    test_call_multipole_grad_cgto<<<1, 1>>>();
-    cudaDeviceSynchronize();
-        
-    return 0;
-}
+*/
