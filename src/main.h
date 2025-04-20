@@ -110,13 +110,13 @@ public:
    end type cgto_type
 */
 
-#define MAXG 4
-typedef struct {
-    int ang = 0;
-    int nprim = 0;
-    double alpha[MAXG] = {0.0};
-    double coeff[MAXG] = {0.0};
-} cgto_type;
+// #define MAXG 4
+// typedef struct {
+//     int ang = 0;
+//     int nprim = 0;
+//     double alpha[MAXG] = {0.0};
+//     double coeff[MAXG] = {0.0};
+// } cgto_type;
 
 
 /* type :: adjacency_list
@@ -167,21 +167,21 @@ typedef struct
     integer, allocatable :: bond(:, :)
  end type structure_type */
 
-typedef struct
-{
-    int nat;          // Number of atoms
-    int nid;          // Number of unique species
-    int nbd;          // Number of bonds
-    int *id;          // Species identifier
-    int *num;         // Atomic number for each species
-    char **sym;       // Element symbol for each species
-    double **xyz;     // Cartesian coordinates, in Bohr
-    int uhf;          // Number of unpaired electrons
-    double charge;    // Total charge
-    double **lattice; // Lattice parameters
-    int *periodic;    // Periodic directions (logical)
-    int **bond;       // Bond indices
-} structure_type;
+// typedef struct
+// {
+//     int nat;          // Number of atoms
+//     int nid;          // Number of unique species
+//     int nbd;          // Number of bonds
+//     int *id;          // Species identifier
+//     int *num;         // Atomic number for each species
+//     char **sym;       // Element symbol for each species
+//     double **xyz;     // Cartesian coordinates, in Bohr
+//     int uhf;          // Number of unpaired electrons
+//     double charge;    // Total charge
+//     double **lattice; // Lattice parameters
+//     int *periodic;    // Periodic directions (logical)
+//     int **bond;       // Bond indices
+// } structure_type;
 
 /* integer, parameter :: maxl = 6
  integer, parameter :: maxl2 = maxl*2
@@ -191,60 +191,60 @@ typedef struct
  real(wp), parameter :: sqrtpi = sqrt(pi)
  real(wp), parameter :: sqrtpi3 = sqrtpi**3*/
 
-__device__ void form_product(const double *a, const double *b, 
-    int la, int lb, double *d);
-__device__ void horizontal_shift(double ae, int l, double *cfs);
-__device__ void shift_operator(const double *vec, double s, 
-    const double *di, const double *qi, const double *ds, 
-    const double ddi[3][3], const double dqi[3][6], 
-    double ddj[3][3], double dqj[3][6]);
-__device__ void multipole_grad_3d(
-        const double rpi[3], const double rpj[3],
-        const double ai, const double aj, 
-        const int li[3], const int lj[3], const double s1d[MAXL2],
+// __device__ void form_product(const double *a, const double *b, 
+//     int la, int lb, double *d);
+// __device__ void horizontal_shift(double ae, int l, double *cfs);
+// __device__ void shift_operator(const double *vec, double s, 
+//     const double *di, const double *qi, const double *ds, 
+//     const double ddi[3][3], const double dqi[3][6], 
+//     double ddj[3][3], double dqj[3][6]);
+// __device__ void multipole_grad_3d(
+//         const double rpi[3], const double rpj[3],
+//         const double ai, const double aj, 
+//         const int li[3], const int lj[3], const double s1d[MAXL2],
         
-        double &s3d, double d3d[3], double q3d[3], double ds3d[3], 
-        double dd3d[3][3], double dq3d[3][6]);
+//         double &s3d, double d3d[3], double q3d[3], double ds3d[3], 
+//         double dd3d[3][3], double dq3d[3][6]);
 
 // #define MSAO 5
 // #define MLAO 6
 // #define LMAP 1
 
-typedef struct {
-    double* at;
-    size_t R;
-    size_t C;
-} matrix;
+// typedef struct {
+//     double* at;
+//     size_t R;
+//     size_t C;
+// } matrix;
 
-typedef struct {
-    double* at;
-    size_t R;
-    size_t C;
-    size_t W;
-} tens3;
+// typedef struct {
+//     double* at;
+//     size_t R;
+//     size_t C;
+//     size_t W;
+// } tens3;
 
-typedef struct {
-    double* at;
-    size_t R;
-    size_t C;
-    size_t W;
-    size_t H;
-} tens4;
+// typedef struct {
+//     double* at;
+//     size_t R;
+//     size_t C;
+//     size_t W;
+//     size_t H;
+// } tens4;
         
-template <size_t N, size_t M, size_t MSAO, size_t MLAO>
-__device__
-void transform2(const int lj, const int li, 
-    const double (&cart)[N][M][MLAO][MLAO], double (&sphr)[N][M][MSAO][MSAO]);
-template <size_t N, size_t MSAO, size_t MLAO>
-__device__
-void transform1(const int lj, const int li, 
-    const double (&cart)[N][MLAO][MLAO], double (&sphr)[N][MSAO][MSAO]);
+// template <size_t N, size_t M, size_t MSAO, size_t MLAO>
+// __device__
+// void transform2(const int lj, const int li, 
+//     const double (&cart)[N][M][MLAO][MLAO], double (&sphr)[N][M][MSAO][MSAO]);
+// template <size_t N, size_t MSAO, size_t MLAO>
+// __device__
+// void transform1(const int lj, const int li, 
+//     const double (&cart)[N][MLAO][MLAO], double (&sphr)[N][MSAO][MSAO]);
 
-// template <size_t msaoj, size_t msaoi, size_t mlaoi, size_t mlaoj>
-__device__
-void transform0(
-    const int lj, const int li, 
-    const matrix &cart, matrix &sphr);
+// // template <size_t msaoj, size_t msaoi, size_t mlaoi, size_t mlaoj>
+// __device__
+// void transform0(
+//     const int lj, const int li, 
+//     const matrix &cart, matrix &sphr);
 
 // #define MSAO 3
 // #define MLAO 3
@@ -268,5 +268,5 @@ void transform0(
 //     double (&dqpintj)[3][6][MSAO][MSAO]
 // );
 
-__global__ void test_call_multipole_grad_cgto();
+// __global__ void test_call_multipole_grad_cgto();
 #endif // FOO_H_
