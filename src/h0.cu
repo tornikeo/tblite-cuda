@@ -60,3 +60,75 @@ void get_occupation(
     }
   }
 }
+
+__device__
+void get_selfenergy(
+  const tb_hamiltonian &h0,
+  const int (&id)[MAX_NAT],
+  const int (&ish_at)[MAX_NAT],
+  const int (&nshell)[MAX_NELEM],
+  const float (&cn)[MAX_NAT],
+  // const float (&qat)[MAX_NAT],
+  float selfenergy[MAX_NSH], // static size
+  float dsedcn[MAX_NSH]     // static size
+  // float dsedq[MAX_NSH],      // static size
+)
+{
+  /* subroutine get_selfenergy(h0, id, ish_at, nshell, cn, qat, selfenergy, dsedcn, dsedq)
+      type(tb_hamiltonian), intent(in) :: h0
+      integer, intent(in) :: id(:)
+      integer, intent(in) :: ish_at(:)
+      integer, intent(in) :: nshell(:)
+      real(wp), intent(in), optional :: cn(:)
+      real(wp), intent(in), optional :: qat(:)
+      real(wp), intent(out) :: selfenergy(:)
+      real(wp), intent(out), optional :: dsedcn(:)
+      real(wp), intent(out), optional :: dsedq(:)
+
+      integer :: iat, izp, ish, ii
+
+      selfenergy(:) = 0.0_wp
+      if (present(dsedcn)) dsedcn(:) = 0.0_wp
+      if (present(dsedq)) dsedq(:) = 0.0_wp
+      do iat = 1, size(id)
+         izp = id(iat)
+         ii = ish_at(iat)
+         do ish = 1, nshell(izp)
+            selfenergy(ii+ish) = h0%selfenergy(ish, izp)
+         end do
+      end do
+      if (present(cn)) then
+         if (present(dsedcn)) then
+            do iat = 1, size(id)
+               izp = id(iat)
+               ii = ish_at(iat)
+               do ish = 1, nshell(izp)
+                  selfenergy(ii+ish) = selfenergy(ii+ish) - h0%kcn(ish, izp) * cn(iat)
+                  dsedcn(ii+ish) = -h0%kcn(ish, izp)
+               end do
+            end do
+         else */
+  for (int i = 0; i < MAX_NSH; ++i) {
+    selfenergy[i] = 0.0f;
+    dsedcn[i] = 0.0f;
+  }
+
+  for (int iat = 0; iat < MAX_NAT; ++iat) {
+    int izp = id[iat];
+    int ii = ish_at[iat];
+    for (int ish = 0; ish < nshell[izp]; ++ish) {
+      selfenergy[ii + ish] = h0.selfenergy[ish][izp];
+    }
+  }
+
+  for (int iat = 0; iat < MAX_NAT; ++iat) {
+    int izp = id[iat];
+    int ii = ish_at[iat];
+    for (int ish = 0; ish < nshell[izp]; ++ish) {
+      selfenergy[ii + ish] -= h0.kcn[ish][izp] * cn[iat];
+      dsedcn[ii + ish] = -h0.kcn[ish][izp];
+    }
+  }
+  /* TODO: Low priority */
+  /* Other options qat, dsedq are not implemented */
+}

@@ -18,8 +18,8 @@
 typedef struct {
   int ang;
   int nprim;
-  float alpha[MAXG];
-  float coeff[MAXG];
+  float alpha[MAXG] = {0};
+  float coeff[MAXG] = {0};
 } cgto_type;
 
 // type :: basis_type
@@ -59,16 +59,20 @@ typedef struct
   int nsh = 0;
   int nao = 0;
   float intcut = 0;
+  float min_alpha = 0;
   // min_alpha don't care
-  int *nsh_id;
-  int *nsh_at; 
-  int *nao_sh;
-  int *iao_sh;
-  int *ish_at;
-  int *ao2at;
-  int *ao2sh;
-  int *sh2at;
-  cgto_type *cgto;
+  int nsh_id[MAX_NELEM];
+  int nsh_at[MAX_NAT]; 
+  int nao_sh[MAX_NSH];
+  int iao_sh[MAX_NSH];
+  int ish_at[MAX_NAT];
+  int ao2at[MAX_NAO];
+  int ao2sh[MAX_NAO];
+  int sh2at[MAX_NSH];
+  cgto_type cgto[MSHELL][MAX_NELEM]; /* cgto(maxval(nsh_id), mol%nid)) */
 } basis_type;
+
+__device__
+float get_cutoff(const basis_type &self, const float acc);
 
 #endif

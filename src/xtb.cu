@@ -311,8 +311,17 @@ __device__ void xtb_singlepoint(
    call get_selfenergy(calc%h0, mol%id, calc%bas%ish_at, calc%bas%nsh_id, cn=cn, &
       & selfenergy=selfenergy, dsedcn=dsedcn)
   */  
- get_selfenergy(calc.h0, mol.id, calc.bas.ish_at, calc.bas.nsh_id, 
-  /*cn=*/cn, /*selfenergy=*/selfenergy, /*dsedcn=*/dsedcn)
+  get_selfenergy(calc.h0, mol.id, calc.bas.ish_at, calc.bas.nsh_id, 
+  /*cn=*/cn, /*selfenergy=*/selfenergy, /*dsedcn=*/dsedcn);
+
+  /* cutoff = get_cutoff(calc%bas, accuracy) */
+  cutoff = get_cutoff(calc.bas, accuracy);
+
+  /* TODO: Priority low. lattices are unsupported */
+  /* call get_lattice_points(mol%periodic, mol%lattice, cutoff, lattr) */
+
+  /* call new_adjacency_list(list, mol, lattr, cutoff) */
+
 }
 
 __global__ void test_xtb_singlepoint()

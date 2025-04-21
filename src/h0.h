@@ -105,8 +105,8 @@ void get_occupation(
   const basis_type &bas,
   const tb_hamiltonian &h0,
   float &nocc,
-  float n0at[MAX_NAT],
-  float n0sh[MAX_NSH]
+  float (&n0at)[MAX_NAT],
+  float (&n0sh)[MAX_NSH]
 );
 
 
@@ -157,52 +157,13 @@ void get_selfenergy(
   const int (&ish_at)[MAX_NAT],
   const int (&nshell)[MAX_NELEM],
   const float (&cn)[MAX_NAT],
-  const float (&qat)[MAX_NAT],
+  // const float (&qat)[MAX_NAT],
   float selfenergy[MAX_NSH], // static size
-  float dsedcn[MAX_NSH],     // static size
-  float dsedq[MAX_NSH],      // static size
-  int id_size,
-  bool cn_present,
-  bool dsedcn_present,
-  bool dsedq_present
-)
-{
-  // Initialize selfenergy and optional outputs
-  for (int i = 0; i < MAX_NSH; ++i) {
-    selfenergy[i] = 0.0f;
-    if (dsedcn_present) dsedcn[i] = 0.0f;
-    if (dsedq_present) dsedq[i] = 0.0f;
-  }
-
-  // Loop over atoms
-  for (int iat = 0; iat < id_size; ++iat) {
-    int izp = id[iat];
-    int ii = ish_at[iat];
-
-    for (int ish = 0; ish < nshell[izp]; ++ish) {
-      selfenergy[ii + ish] = h0.selfenergy[ish][izp];
-    }
-  }
-
-  if (cn_present) {
-    for (int iat = 0; iat < id_size; ++iat) {
-      int izp = id[iat];
-      int ii = ish_at[iat];
-
-      for (int ish = 0; ish < nshell[izp]; ++ish) {
-        selfenergy[ii + ish] -= h0.kcn[ish][izp] * cn[iat];
-        if (dsedcn_present) {
-          dsedcn[ii + ish] = -h0.kcn[ish][izp];
-        }
-      }
-    }
-  }
-
-  if (dsedq_present) {
-    // Handle dsedq if necessary (currently no specific logic provided)
-  }
-}
-{
-
-}
+  float dsedcn[MAX_NSH]     // static size
+  // float dsedq[MAX_NSH],      // static size
+  // int id_size,
+  // bool cn_present,
+  // bool dsedcn_present,
+  // bool dsedq_present
+);
 #endif
