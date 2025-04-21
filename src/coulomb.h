@@ -147,3 +147,12 @@ void update(
   const structure_type &mol,
   coulomb_cache &cache
 );
+
+__device__
+void ncoord_get_cn(
+  const gfn_ncoord_type &self,
+  const structure_type &mol,
+  float (&cn)[MAX_NAT],
+  float (&dcndr)[MAX_NAT][MAX_NAT][3],
+  float (&dcndL)[MAX_NAT][3][3]
+);

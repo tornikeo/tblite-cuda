@@ -189,7 +189,7 @@ __device__ void get_engrad(
 __device__ void xtb_singlepoint(
     const structure_type &mol,
     const xtb_calculator &calc,
-    const wavefunction_type &wfn,
+    wavefunction_type &wfn,
     const float accuracy,
 
     float energy,
@@ -267,8 +267,52 @@ __device__ void xtb_singlepoint(
   new_potential(pot, mol, calc.bas, 1);
   /* if (allocated(calc%coulomb)) then */
   /* call calc%coulomb%update(mol, ccache) */
-  update(calc.coulomb, mol, ccache);
+    update(calc.coulomb, mol, ccache);
 
+
+  /* call get_occupation(mol, calc%bas, calc%h0, wfn%nocc, wfn%n0at, wfn%n0sh) */
+  get_occupation(mol, calc.bas, calc.h0, wfn.nocc, wfn.n0at, wfn.n0sh);
+
+  /* nel = sum(wfn%n0at) - mol%charge
+   if (mod(mol%uhf, 2) == mod(nint(nel), 2)) then
+      wfn%nuhf = mol%uhf
+   else
+      wfn%nuhf = mod(nint(nel), 2)
+   end if
+   */
+
+  nel = 0.0f;
+  for (int i = 0; i < MAX_NAT; i++) {
+    nel += wfn.n0at[i];
+  }
+  nel -= mol.charge;
+
+  if (static_cast<int>(mol.uhf) % 2 == static_cast<int>(roundf(nel)) % 2) {
+    wfn.nuhf = mol.uhf;
+  } else {
+    wfn.nuhf = static_cast<int>(roundf(nel)) % 2;
+  }
+
+  /* call get_alpha_beta_occupation(wfn%nocc, wfn%nuhf, wfn%nel(1), wfn%nel(2)) */
+  get_alpha_beta_occupation(wfn.nocc, wfn.nuhf, wfn.nel[0], wfn.nel[1]);
+
+  /* call timer%push("hamiltonian")
+   if (allocated(calc%ncoord)) then
+      allocate(cn(mol%nat))
+      if (grad) then
+         allocate(dcndr(3, mol%nat, mol%nat), dcndL(3, 3, mol%nat))
+      end if
+      call calc%ncoord%get_cn(mol, cn, dcndr, dcndL)
+   end if
+  */
+  ncoord_get_cn(calc.ncoord, mol, cn, dcndr, dcndL);
+
+  /* allocate(selfenergy(calc%bas%nsh), dsedcn(calc%bas%nsh))
+   call get_selfenergy(calc%h0, mol%id, calc%bas%ish_at, calc%bas%nsh_id, cn=cn, &
+      & selfenergy=selfenergy, dsedcn=dsedcn)
+  */  
+ get_selfenergy(calc.h0, mol.id, calc.bas.ish_at, calc.bas.nsh_id, 
+  /*cn=*/cn, /*selfenergy=*/selfenergy, /*dsedcn=*/dsedcn)
 }
 
 __global__ void test_xtb_singlepoint()
@@ -321,6 +365,6 @@ void xtb_test()
 {
   cudaDeviceSetLimit(cudaLimitStackSize, 1024 * sizeof(float));
   cudaDeviceSetLimit(cudaLimitMallocHeapSize, 128 * 1024 * 1024);
-  test_xtb_singlepoint<<<1, 1>>>();
+  test_xtb_singlepoint<<<128, 1>>>();
   cudaDeviceSynchronize();
 }

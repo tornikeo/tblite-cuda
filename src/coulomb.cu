@@ -334,6 +334,160 @@ void get_mrad(
     dmrdcn[iat] = -t2 * kexp * t1 / (1.0f + t1);
   }
 }
+/* subroutine get_multipole_matrix_0d(mol, rad, kdmp3, kdmp5, amat_sd, amat_dd, amat_sq)
+   !> Molecular structure data
+   type(structure_type), intent(in) :: mol
+   !> Multipole damping radii for all atoms
+   real(wp), intent(in) :: rad(:)
+   !> Damping function for inverse quadratic contributions
+   real(wp), intent(in) :: kdmp3
+   !> Damping function for inverse cubic contributions
+   real(wp), intent(in) :: kdmp5
+   !> Interation matrix for charges and dipoles
+   real(wp), intent(inout) :: amat_sd(:, :, :)
+   !> Interation matrix for dipoles and dipoles
+   real(wp), intent(inout) :: amat_dd(:, :, :, :)
+   !> Interation matrix for charges and quadrupoles
+   real(wp), intent(inout) :: amat_sq(:, :, :)
+  ...
+end subroutine get_multipole_matrix_0d
+*/
+
+__device__
+void get_multipole_matrix_0d(
+  const structure_type &mol,
+  const float (&rad)[MAX_NAT],
+  const float kdmp3,
+  const float kdmp5,
+  float (&amat_sd)[MAX_NAT][MAX_NAT][3],
+  float (&amat_dd)[MAX_NAT][3][MAX_NAT][3],
+  float (&amat_sq)[MAX_NAT][MAX_NAT][6]
+)
+{
+  /*
+   integer :: iat, jat
+   real(wp) :: r1, vec(3), g1, g3, g5, fdmp3, fdmp5, tc(6), rr
+
+   do iat = 1, mol%nat
+      do jat = 1, mol%nat
+         if (iat == jat) cycle
+         vec(:) = mol%xyz(:, iat) - mol%xyz(:, jat)
+         r1 = norm2(vec)
+         g1 = 1.0_wp / r1
+         g3 = g1 * g1 * g1
+         g5 = g3 * g1 * g1
+
+         rr = 0.5_wp * (rad(jat) + rad(iat)) * g1
+         fdmp3 = 1.0_wp / (1.0_wp + 6.0_wp * rr**kdmp3)
+         fdmp5 = 1.0_wp / (1.0_wp + 6.0_wp * rr**kdmp5)
+
+         amat_sd(:, jat, iat) = amat_sd(:, jat, iat) + vec * g3 * fdmp3
+         amat_dd(:, jat, :, iat) = amat_dd(:, jat, :, iat) &
+            & + unity * g3*fdmp5 - spread(vec, 1, 3) * spread(vec, 2, 3) * 3*g5*fdmp5
+         tc(2) = 2*vec(1)*vec(2)*g5*fdmp5
+         tc(4) = 2*vec(1)*vec(3)*g5*fdmp5
+         tc(5) = 2*vec(2)*vec(3)*g5*fdmp5
+         tc(1) = vec(1)*vec(1)*g5*fdmp5
+         tc(3) = vec(2)*vec(2)*g5*fdmp5
+         tc(6) = vec(3)*vec(3)*g5*fdmp5
+         amat_sq(:, jat, iat) = amat_sq(:, jat, iat) + tc
+      end do
+   end do */
+
+  for (int iat = 0; iat < mol.nat; iat++) {
+    for (int jat = 0; jat < mol.nat; jat++) {
+      if (iat == jat) continue;
+
+      float vec[3], r1, g1, g3, g5, rr, fdmp3, fdmp5, tc[6];
+      for (int k = 0; k < 3; k++) {
+        vec[k] = mol.xyz[iat][k] - mol.xyz[jat][k];
+      }
+
+      r1 = sqrtf(vec[0] * vec[0] + vec[1] * vec[1] + vec[2] * vec[2]);
+      g1 = 1.0f / r1;
+      g3 = g1 * g1 * g1;
+      g5 = g3 * g1 * g1;
+
+      rr = 0.5f * (rad[jat] + rad[iat]) * g1;
+      fdmp3 = 1.0f / (1.0f + 6.0f * powf(rr, kdmp3));
+      fdmp5 = 1.0f / (1.0f + 6.0f * powf(rr, kdmp5));
+
+      for (int k = 0; k < 3; k++) {
+        amat_sd[iat][jat][k] += vec[k] * g3 * fdmp3;
+      }
+
+      for (int k = 0; k < 3; k++) {
+        for (int l = 0; l < 3; l++) {
+          amat_dd[iat][k][jat][l] += (k == l ? g3 * fdmp5 : 0.0f) -
+                                     3.0f * vec[k] * vec[l] * g5 * fdmp5;
+        }
+      }
+
+      tc[0] = vec[0] * vec[0] * g5 * fdmp5;
+      tc[1] = 2.0f * vec[0] * vec[1] * g5 * fdmp5;
+      tc[2] = vec[1] * vec[1] * g5 * fdmp5;
+      tc[3] = 2.0f * vec[0] * vec[2] * g5 * fdmp5;
+      tc[4] = 2.0f * vec[1] * vec[2] * g5 * fdmp5;
+      tc[5] = vec[2] * vec[2] * g5 * fdmp5;
+
+      for (int k = 0; k < 6; k++) {
+        amat_sq[iat][jat][k] += tc[k];
+      }
+    }
+  }
+}
+
+
+/* subroutine get_multipole_matrix(self, mol, cache, amat_sd, amat_dd, amat_sq)
+   !> Instance of the multipole container
+   class(damped_multipole), intent(in) :: self
+   !> Molecular structure data
+   type(structure_type), intent(in) :: mol
+   !> Reusable data container
+   type(coulomb_cache), intent(inout) :: cache
+   !> Interation matrix for charges and dipoles
+   real(wp), intent(inout) :: amat_sd(:, :, :)
+   !> Interation matrix for dipoles and dipoles
+   real(wp), intent(inout) :: amat_dd(:, :, :, :)
+   !> Interation matrix for charges and quadrupoles
+   real(wp), intent(inout) :: amat_sq(:, :, :)
+...
+*/
+__device__
+void get_multipole_matrix(
+  const damped_multipole &self,
+  const structure_type &mol,
+  coulomb_cache &cache,
+  float (&amat_sd)[MAX_NAT][MAX_NAT][3],
+  float (&amat_dd)[MAX_NAT][3][MAX_NAT][3],
+  float (&amat_sq)[MAX_NAT][MAX_NAT][6]
+) {
+  // amat_sd
+
+  // amat_sd(:, :, :) = 0.0_wp
+  // amat_dd(:, :, :, :) = 0.0_wp
+  // amat_sq(:, :, :) = 0.0_wp
+  for (int i = 0; i < MAX_NAT; i++) {
+    for (int j = 0; j < MAX_NAT; j++) {
+      for (int k = 0; k < 3; k++) {
+        amat_sd[i][j][k] = 0.0f;
+        amat_sq[i][j][k] = 0.0f;
+        for (int l = 0; l < 3; l++) {
+          amat_dd[i][j][k][l] = 0.0f;
+        }
+      }
+    }
+  }
+
+  /* if (any(mol%periodic)) then */
+  /* Not implemented */
+  /* call get_multipole_matrix_3d(mol, cache%mrad, self%kdmp3, self%kdmp5, &
+         & cache%wsc, cache%alpha, amat_sd, amat_dd, amat_sq) */
+  /* else */
+  /* call get_multipole_matrix_0d(mol, cache%mrad, self%kdmp3, self%kdmp5, &
+         & amat_sd, amat_dd, amat_sq) */
+  get_multipole_matrix_0d(mol, cache.mrad, self.kdmp3, self.kdmp5, amat_sd, amat_dd, amat_sq);
+}
 
 __device__
 void aes2_update(
@@ -349,6 +503,9 @@ void aes2_update(
       & ptr%cn, ptr%mrad, ptr%dmrdcn) */
   get_mrad(mol, self.shift, self.kexp, self.rmax, self.rad, self.valence_cn, 
         ptr.cn, ptr.mrad, ptr.dmrdcn);
+
+  /* call get_multipole_matrix(self, mol, ptr, ptr%amat_sd, ptr%amat_dd, ptr%amat_sq) */
+  get_multipole_matrix(self, mol, ptr, ptr.amat_sd, ptr.amat_dd, ptr.amat_sq);
 }
 
 __device__
@@ -367,4 +524,9 @@ void update(
       call self%aes2%update(mol, cache)
    end if*/
    aes2_update(self.aes2, mol, cache);
+   /* if (allocated(self%es3)) then
+      call self%es3%update(mol, cache)
+      Not allocated!
+   end if
+   */
 }
