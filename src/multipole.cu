@@ -1,6 +1,7 @@
 #include "multipole.h"
 #include <iostream>
 #include <assert.h>
+#include "limits.h"
 // pure subroutine form_product(a, b, la, lb, d)
 //    integer, intent(in) :: la, lb
 //    real(wp), intent(in) :: a(*), b(*)

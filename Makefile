@@ -1,7 +1,7 @@
 # Thanks to Job Vranish (https://spin.atomicobject.com/2016/08/26/makefile-c-projects/)
 TARGET_EXEC := main.bin
 
-CXX := nvcc
+NVCC := nvcc -ccbin=gcc -G -g -rdc=true
 BUILD_DIR := ./build
 SRC_DIRS := ./src
 
@@ -25,21 +25,16 @@ INC_FLAGS := $(addprefix -I,$(INC_DIRS))
 # The -MMD and -MP flags together generate Makefiles for us!
 # These files will have .d instead of .o as the output.
 CPPFLAGS := -G -g $(INC_FLAGS)  -MMD -MP 
-CXXFLAGS := -Xcompiler -Wno-unused-variable
+CFLAGS := -Xcompiler -Wno-unused-variable
 
 # The final build step.
 $(BUILD_DIR)/$(TARGET_EXEC): $(OBJS)
-	$(CXX) -G -g $(OBJS) -o $@ $(LDFLAGS)
-
-# Build step for C source
-$(BUILD_DIR)/%.c.o: %.c
-	mkdir -p $(dir $@)
-	$(CC) $(CPPFLAGS) $(CFLAGS) -c $< -o $@
+	$(NVCC) $(OBJS) -o $@ $(CFLAGS)
 
 # Build step for CUDA source
 $(BUILD_DIR)/%.cu.o: %.cu
 	mkdir -p $(dir $@)
-	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $< -o $@
+	$(NVCC) -c $< -o $@ $(CFLAGS)
 
 
 .PHONY: clean

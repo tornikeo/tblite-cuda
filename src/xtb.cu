@@ -3,6 +3,8 @@
 #include <cassert>
 #include <cstdlib>
 #include "xtb.h"
+#include "basis/type.h"
+#include "potential.h"
 
 template<int N>
 __device__ inline float sum_square(const float (&arr)[N]) {
@@ -225,7 +227,8 @@ __device__ void xtb_singlepoint(
   float dEdcn[MAX_NAT] = {0};
   float wdensity[MAX_NSPIN][MAX_NAO][MAX_NAO] = {0};
 
-  container_cache ccache;
+  potential_type pot;
+  // container_cache ccache;
 
   // gradient(:, :) = 0.0_wp
   // sigma(:, :) = 0.0_wp
@@ -252,13 +255,16 @@ __device__ void xtb_singlepoint(
     energies[i] += erep[i];
   }
 
-
-  /* if (allocated(calc%dispersion)) then TODO */
-  /* dispersion_get_engrad(calc.dispersion, mol, edisp, gradient, sigma); */ 
+  /* if (allocated(calc%dispersion)) then  */
+  /* TODO: priority medium 
+  dispersion_get_engrad(calc.dispersion, mol, edisp, gradient, sigma); */ 
 
   /* if (allocated(calc%interactions)) then TODO */
+  /* TODO: priority low */
 
-  
+  /* call new_potential(pot, mol, calc%bas, wfn%nspin) */
+  // new_potential(pot, mol, calc.bas, wfn.nspin);
+  new_potential(pot, mol, calc.bas, 1);
 }
 
 __global__ void test_xtb_singlepoint()
