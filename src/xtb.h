@@ -2,14 +2,19 @@
 #define X_XTB
 
 #define MAXG 12
+#define MAX_NAT 9
+#define MAX_NSH 14
+#define MAX_NAO 26
+#define MAX_NSPIN 1
+#define MAX_NELEM 4
 
 typedef struct {
   int nat;
   int nid;
   int nbd;
-  int *id;
-  int *num;
-  float *xyz;
+  int id[MAX_NAT];
+  int num[MAX_NELEM];
+  float xyz[MAX_NAT][3];
 } structure_type;
 
 // integer, parameter :: maxg = 12
@@ -139,6 +144,72 @@ typedef struct {
   float *refocc;     // Flattened 2D array, [mshell, mol%nid]
 } tb_hamiltonian;
 
+/*   !> Container to evaluate classical repulsion interactions for the xTB Hamiltonian
+   type, extends(repulsion_type) :: tb_repulsion
+      !> Exponent for the repulsion interaction
+      real(wp), allocatable :: alpha(:, :)
+      !> Effective nuclear charge
+      real(wp), allocatable :: zeff(:, :)
+      !> Scaling of the repulsion exponents
+      real(wp), allocatable :: kexp(:, :)
+      !> Exponent of the repulsion polynomial
+      real(wp), allocatable :: rexp(:, :)
+      !> Real-space cutoff
+      real(wp) :: cutoff = 25.0_wp
+   contains
+      procedure :: get_engrad
+   end type tb_repulsion*/
+typedef struct {
+  float alpha[MAX_NELEM][MAX_NELEM];  // Flattened 2D array, [nelem, nelem]
+  float zeff[MAX_NELEM][MAX_NELEM];   // Flattened 2D array, [nelem, nelem]
+  float kexp[MAX_NELEM][MAX_NELEM];   // Flattened 2D array, [nelem, nelem]
+  float rexp[MAX_NELEM][MAX_NELEM];   // Flattened 2D array, [nelem, nelem]
+  float cutoff = 25.0f; // Real-space cutoff
+} tb_repulsion;
+
+typedef struct 
+{
+   int nshell[MAX_NAT];
+   int offset[MAX_NSH];
+
+} effective_coulomb;
+
+typedef struct 
+{
+/* data */
+
+} container_cache;
+
+
+class coulomb_charge_type 
+{
+  public:
+  __device__ void update(const structure_type &mol, container_cache &cache);
+};
+
+class damped_multipole
+{
+
+};
+
+class onsite_thirdorder
+{
+
+};
+
+class tb_coulomb {
+  public:
+  coulomb_charge_type es2;
+  damped_multipole aes2;
+  onsite_thirdorder es3;
+  __device__ void update(const structure_type &mol);
+};
+// typedef struct 
+// {
+// /* data */
+// } dispersion_type;
+
+
 typedef struct
 {
   // type(basis_type) :: bas
@@ -155,6 +226,9 @@ typedef struct
   // type(container_list), allocatable :: interactions
   basis_type bas;
   tb_hamiltonian h0;
+  tb_repulsion repulsion;
+  tb_coulomb coulomb; 
+  // dispersion_type dispersion;
 } xtb_calculator;
 
 /*
