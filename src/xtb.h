@@ -4,6 +4,7 @@
 #include "structure.h"
 #include "basis/type.h"
 #include "potential.h"
+#include "coulomb.h"
 
 /*
    type :: tb_hamiltonian
@@ -88,41 +89,11 @@ typedef struct {
 
 typedef struct 
 {
-   int nshell[MAX_NAT];
-   int offset[MAX_NSH];
-
-} effective_coulomb;
-
-typedef struct 
-{
 /* data */
 
 } container_cache;
 
 
-class coulomb_charge_type 
-{
-  public:
-  __device__ void update(const structure_type &mol, container_cache &cache);
-};
-
-class damped_multipole
-{
-
-};
-
-class onsite_thirdorder
-{
-
-};
-
-class tb_coulomb {
-  public:
-  coulomb_charge_type es2;
-  damped_multipole aes2;
-  onsite_thirdorder es3;
-  __device__ void update(const structure_type &mol);
-};
 // typedef struct 
 // {
 // /* data */

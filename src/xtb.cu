@@ -228,7 +228,7 @@ __device__ void xtb_singlepoint(
   float wdensity[MAX_NSPIN][MAX_NAO][MAX_NAO] = {0};
 
   potential_type pot;
-  // container_cache ccache;
+  coulomb_cache ccache;
 
   // gradient(:, :) = 0.0_wp
   // sigma(:, :) = 0.0_wp
@@ -265,6 +265,10 @@ __device__ void xtb_singlepoint(
   /* call new_potential(pot, mol, calc%bas, wfn%nspin) */
   // new_potential(pot, mol, calc.bas, wfn.nspin);
   new_potential(pot, mol, calc.bas, 1);
+  /* if (allocated(calc%coulomb)) then */
+  /* call calc%coulomb%update(mol, ccache) */
+  update(calc.coulomb, mol, ccache);
+
 }
 
 __global__ void test_xtb_singlepoint()
