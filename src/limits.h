@@ -13,4 +13,16 @@
 #define MAX_NELEM 4
 
 
+// Steepness of the first counting function
+#define KA 10.0
+
+// Steepness of the second counting function
+#define KB 20.0
+
+// Offset of the second counting function
+#define R_SHIFT 2.0
+
+// Default cutoff value
+#define DEFAULT_CUTOFF 25.0
+
 #endif
