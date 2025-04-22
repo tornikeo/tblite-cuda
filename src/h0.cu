@@ -212,7 +212,9 @@ __device__ void get_selfenergy(
 //   }
 // }
 
-__device__ void get_hamiltonian(
+// NOTE: This function is an abomination and get_hamiltonian_gradient is even worse.
+__device__ 
+void get_hamiltonian(
     const structure_type &mol,
     /* const float (&trans)[MAX_TRANS][3],*/ // Unimplemented
     const adjacency_list &alist,
@@ -317,7 +319,86 @@ __device__ void get_hamiltonian(
         for (jao = 0; jao < nao; ++jao)
         {
           // ij = jao + nao * iao;
-          
+          /* TODO later
+            call shift_operator(vec, stmp(ij), dtmpi(:, ij), qtmpi(:, ij), &
+                        & dtmpj, qtmpj)
+          */
+            shift_operator(vec, stmp[iao][jao], dtmpi[iao][jao], qtmpi[iao][jao],
+              dtmpi, qtmpj
+            )
+          /*
+          overlap(jj+jao, ii+iao) = overlap(jj+jao, ii+iao) &
+              + stmp(ij)
+
+          do k = 1, 3
+              ! $omp atomic
+              dpint(k, jj+jao, ii+iao) = dpint(k, jj+jao, ii+iao) &
+                + dtmpi(k, ij)
+          end do
+
+          do k = 1, 6
+              ! $omp atomic
+              qpint(k, jj+jao, ii+iao) = qpint(k, jj+jao, ii+iao) &
+                + qtmpi(k, ij)
+          end do
+
+          ! $omp atomic
+          hamiltonian(jj+jao, ii+iao) = hamiltonian(jj+jao, ii+iao) &
+              + stmp(ij) * hij
+
+          */
+
+          overlap[jj + jao][ii + iao] += stmp[iao][jao];
+
+          for (k = 0; k < 3; ++k)
+          {
+            dpint[ii + iao][jj + jao][k] += dtmpi[iao][jao][k];
+          }
+
+          for (k = 0; k < 6; ++k)
+          {
+            qpint[ii + iao][jj + jao][k] += qtmpi[iao][jao][k];
+          }
+
+          hamiltonian[ii + iao][jj + jao] += stmp[iao][jao] * hij;
+
+          /* 
+          if (iat /= jat) then
+              ! $omp atomic
+              overlap(ii+iao, jj+jao) = overlap(ii+iao, jj+jao) &
+                + stmp(ij)
+              do k = 1, 3
+                ! $omp atomic
+                dpint(k, ii+iao, jj+jao) = dpint(k, ii+iao, jj+jao) &
+                    + dtmpj(k)
+              end do
+
+              do k = 1, 6
+                ! $omp atomic
+                qpint(k, ii+iao, jj+jao) = qpint(k, ii+iao, jj+jao) &
+                    + qtmpj(k)
+              end do
+              ! $omp atomic
+              hamiltonian(ii+iao, jj+jao) = hamiltonian(ii+iao, jj+jao) &
+                + stmp(ij) * hij
+          end if
+          */
+          if (iat != jat)
+          {
+            overlap[ii + iao][jj + jao] += stmp[iao][jao];
+
+            for (k = 0; k < 3; ++k)
+            {
+              dpint[ii + iao][jj + jao][k] += dtmpj[k];
+            }
+
+            for (k = 0; k < 6; ++k)
+            {
+              qpint[ii + iao][jj + jao][k] += qtmpj[k];
+            }
+
+            hamiltonian[ii + iao][jj + jao] += stmp[iao][jao] * hij;
+          }
         }
       }
     }
