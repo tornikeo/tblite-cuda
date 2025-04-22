@@ -119,24 +119,7 @@ public:
 // } cgto_type;
 
 
-/* type :: adjacency_list
- !> Offset index in the neighbour map
- integer, allocatable :: inl(:)
- !> Number of neighbours for each atom
- integer, allocatable :: nnl(:)
- !> Index of the neighbouring atom
- integer, allocatable :: nlat(:)
- !> Cell index of the neighbouring atom
- integer, allocatable :: nltr(:)
- end type adjacency_list */
 
-typedef struct
-{
-    int *inl;  // Offset index in the neighbour map
-    int *nnl;  // Number of neighbours for each atom
-    int *nlat; // Index of the neighbouring atom
-    int *nltr; // Cell index of the neighbouring atom
-} adjacency_list;
 
 
 /* !> Structure representation

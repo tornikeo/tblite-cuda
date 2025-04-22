@@ -5,6 +5,9 @@
 #include "xtb.h"
 #include "basis/type.h"
 #include "potential.h"
+#include "adjlist.h"
+#include "wavefunction/type.h"
+#include "integral/type.h"
 
 template<int N>
 __device__ inline float sum_square(const float (&arr)[N]) {
@@ -198,9 +201,17 @@ __device__ void xtb_singlepoint(
     const int verbosity)
 {
   bool grad, converged, econverged, pconverged;
-  int prlevel;
   float econv, pconv, cutoff, elast, dpmom[3], qpmom[6], nel;
+  
+  /* 
+   if (present(verbosity)) then
+      prlevel = verbosity
+   else
+      prlevel = ctx%verbosity
+   end if
+  */
 
+  int prlevel = verbosity;
   // allocate(energies(mol%nat), source=0.0_wp)
   // allocate(erep(mol%nat), source=0.0_wp)
   // allocate(edisp(mol%nat), source=0.0_wp)
@@ -227,8 +238,10 @@ __device__ void xtb_singlepoint(
   float dEdcn[MAX_NAT] = {0};
   float wdensity[MAX_NSPIN][MAX_NAO][MAX_NAO] = {0};
 
+  adjacency_list list;
   potential_type pot;
   coulomb_cache ccache;
+  integral_type ints;
 
   // gradient(:, :) = 0.0_wp
   // sigma(:, :) = 0.0_wp
@@ -249,25 +262,31 @@ __device__ void xtb_singlepoint(
   }
 
   /* if (allocated(calc%repulsion)) then */
-  get_engrad(calc.repulsion, mol, erep, gradient, sigma);
-  for (int i = 0; i < MAX_NAT; i++)
-  {
-    energies[i] += erep[i];
-  }
+    get_engrad(calc.repulsion, mol, erep, gradient, sigma);
+    for (int i = 0; i < MAX_NAT; i++)
+    {
+      energies[i] += erep[i];
+    }
+    if(prlevel > 1)
+    {
+      printf("repulsion energy %d Eh\n", sum(erep));
+    }  
+  /* end if */
 
   /* if (allocated(calc%dispersion)) then  */
-  /* TODO: priority medium 
+    /* TODO: priority medium 
+
   dispersion_get_engrad(calc.dispersion, mol, edisp, gradient, sigma); */ 
 
   /* if (allocated(calc%interactions)) then TODO */
-  /* TODO: priority low */
+    /* TODO: priority low */
 
   /* call new_potential(pot, mol, calc%bas, wfn%nspin) */
   // new_potential(pot, mol, calc.bas, wfn.nspin);
   new_potential(pot, mol, calc.bas, 1);
   /* if (allocated(calc%coulomb)) then */
   /* call calc%coulomb%update(mol, ccache) */
-    update(calc.coulomb, mol, ccache);
+  update(calc.coulomb, mol, ccache);
 
 
   /* call get_occupation(mol, calc%bas, calc%h0, wfn%nocc, wfn%n0at, wfn%n0sh) */
@@ -295,6 +314,12 @@ __device__ void xtb_singlepoint(
 
   /* call get_alpha_beta_occupation(wfn%nocc, wfn%nuhf, wfn%nel(1), wfn%nel(2)) */
   get_alpha_beta_occupation(wfn.nocc, wfn.nuhf, wfn.nel[0], wfn.nel[1]);
+  /*    if (prlevel > 1) print *, property("number of electrons", wfn%nocc, "e") */
+
+  if(prlevel > 1)
+  {
+    printf("Number of electrons: %f e\n", wfn.nocc);
+  }
 
   /* call timer%push("hamiltonian")
    if (allocated(calc%ncoord)) then
@@ -319,9 +344,29 @@ __device__ void xtb_singlepoint(
 
   /* TODO: Priority low. lattices are unsupported */
   /* call get_lattice_points(mol%periodic, mol%lattice, cutoff, lattr) */
-
+  // float lattr[3][1] = {0};
   /* call new_adjacency_list(list, mol, lattr, cutoff) */
+  new_adjacency_list(list, mol, /*lattr,*/ cutoff, false);
 
+  /*    if (prlevel > 1) then
+      print *, property("integral cutoff", cutoff, "bohr")
+      print *
+   end if 
+   */
+  if(prlevel > 1)
+  {
+    printf("Integral cutoff: %f bohr\n", cutoff);
+  }
+
+  /* call new_integral(ints, calc%bas%nao) */  
+  new_integral(ints, calc.bas.nao);
+
+  /* call get_hamiltonian(mol, lattr, list, calc%bas, calc%h0, selfenergy, &
+      & ints%overlap, ints%dipole, ints%quadrupole, ints%hamiltonian) */
+  get_hamiltonian(
+    mol, /* lattr, */list, calc.bas, calc.h0, selfenergy, 
+    ints.overlap, ints.dipole, ints.quadrupole, ints.hamiltonian
+  );
 }
 
 __global__ void test_xtb_singlepoint()
@@ -364,16 +409,16 @@ __global__ void test_xtb_singlepoint()
 
   float gradient[MAX_NAT][3] = {0};
   float sigma[3][3] = {0.0};
-  int verbosity = 1;
+  int verbosity = 2;
 
   xtb_singlepoint(mol, calc, wfn, accuracy, energy, gradient, sigma, verbosity);
-  printf("Energy: %f\n", energy);
+  // printf("Energy: %f\n", energy);
 }
 
 void xtb_test()
 {
   cudaDeviceSetLimit(cudaLimitStackSize, 1024 * sizeof(float));
   cudaDeviceSetLimit(cudaLimitMallocHeapSize, 128 * 1024 * 1024);
-  test_xtb_singlepoint<<<128, 1>>>();
+  test_xtb_singlepoint<<<1, 1>>>();
   cudaDeviceSynchronize();
 }

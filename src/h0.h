@@ -3,7 +3,8 @@
 #include "limits.h"
 #include "structure.h"
 #include "basis/type.h"
-
+#include "integral/type.h"
+#include "adjlist.h"
 /*
 type :: tb_hamiltonian
       !> Atomic level information
@@ -166,4 +167,57 @@ void get_selfenergy(
   // bool dsedcn_present,
   // bool dsedq_present
 );
+
+
+/* 
+subroutine get_hamiltonian(mol, trans, alist, bas, h0, selfenergy, overlap, dpint, qpint, &
+   & hamiltonian)
+      !> Molecular structure data
+      type(structure_type), intent(in) :: mol
+      !> Lattice points within a given realspace cutoff
+      real(wp), intent(in) :: trans(:, :)
+      !> Neighbour list
+      type(adjacency_list), intent(in) :: alist
+      !> Basis set information
+      type(basis_type), intent(in) :: bas
+      !> Hamiltonian interaction data
+      type(tb_hamiltonian), intent(in) :: h0
+      !> Diagonal elememts of the Hamiltonian
+      real(wp), intent(in) :: selfenergy(:)
+      !> Overlap integral matrix
+      real(wp), intent(out) :: overlap(:, :)
+      !> Dipole moment integral matrix
+      real(wp), intent(out) :: dpint(:, :, :)
+      !> Quadrupole moment integral matrix
+      real(wp), intent(out) :: qpint(:, :, :)
+      !> Effective Hamiltonian
+      real(wp), intent(out) :: hamiltonian(:, :)
+
+*/
+
+/* 
+typedef struct 
+{
+  float hamiltonian[MAX_NAO][MAX_NAO];
+  float overlap[MAX_NAO][MAX_NAO];
+  float dipole[MAX_NAO][MAX_NAO][3];  // notice the inverted axes
+  float quadrupole[MAX_NAO][MAX_NAO][6]; // Notice the inverted axes
+} integral_type;
+*/
+
+__device__
+void get_hamiltonian(
+  const structure_type &mol,
+  /* const float (&trans)[MAX_TRANS][3],*/ // Unimplemented
+  const adjacency_list &alist,
+  const basis_type &bas,
+  const tb_hamiltonian &h0,
+  const float (&selfenergy)[MAX_NSH],
+  float (&overlap)[MAX_NAO][MAX_NAO],
+  float (&dpint)[MAX_NAO][MAX_NAO][3],
+  float (&qpint)[MAX_NAO][MAX_NAO][6],
+  float (&hamiltonian)[MAX_NAO][MAX_NAO]
+);
+
+
 #endif

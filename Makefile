@@ -1,7 +1,7 @@
 # Thanks to Job Vranish (https://spin.atomicobject.com/2016/08/26/makefile-c-projects/)
 TARGET_EXEC := main.bin
 
-NVCC := nvcc -ccbin=gcc -G -g -rdc=true
+NVCC := nvcc -ccbin=gcc -G -g -rdc=true -std=c++17
 BUILD_DIR := ./build
 SRC_DIRS := ./src
 

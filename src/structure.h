@@ -6,6 +6,7 @@ typedef struct {
   int nat;
   int nid;
   int nbd;
+  bool periodic = false; 
   int id[MAX_NAT];
   int num[MAX_NELEM];
   float xyz[MAX_NAT][3];

@@ -6,6 +6,7 @@
 
 int main()
 {
+
     // std::cout << "Running test_form_product..." << std::endl;
     // test_form_product<<<1, 1>>>();
     // cudaDeviceSynchronize();
@@ -33,7 +34,7 @@ int main()
     // std::cout << "Running test_fill_matrix..." << std::endl;
     // test_call_multipole_grad_cgto<<<1, 1>>>();
     // cudaDeviceSynchronize();
-    printf("Hello, world!\n");
+    // printf("Hello, world!\n");
     xtb_test();
     return 0;
 }

@@ -29,6 +29,6 @@ void new_potential(
   const int nspin
 )
 {
-  printf("Here we are!\n");
+  // printf("Here we are!\n");
   // do nothing 
 }
