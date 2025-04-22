@@ -1,31 +1,29 @@
-#ifndef TBLITE_MAIN   /* Include guard */
-#define TBLITE_MAIN
-#define MAXL 6
-#define MAXL2 12 // 2 x MAXL
-#define SQRT_PI 1.77245385091  // Approximation of sqrt(pi)
-#define SQRT_PI3 5.56832799683 // Approximation of sqrt(pi)^3
-#define S3 sqrt(3.0)
-#define S3_4 (S3 * 0.5)
-#define D32 (3.0 / 2.0)
-#define S3_8 sqrt(3.0 / 8.0)
-#define S5_8 sqrt(5.0 / 8.0)
-#define S6 sqrt(6.0)
-#define S15 sqrt(15.0)
-#define S15_4 sqrt(15.0 / 4.0)
-#define S45 sqrt(45.0)
-#define S45_8 sqrt(45.0 / 8.0)
-#define D38 (3.0 / 8.0)
-#define D34 (3.0 / 4.0)
-#define S5_16 sqrt(5.0 / 16.0)
-#define S10 sqrt(10.0)
-#define S10_8 sqrt(10.0 / 8.0)
-#define S35_4 sqrt(35.0 / 4.0)
-#define S35_8 sqrt(35.0 / 8.0)
-#define S35_64 sqrt(35.0 / 64.0)
-#define S45_4 sqrt(45.0 / 4.0)
-#define S315_8 sqrt(315.0 / 8.0)
-#define S315_16 sqrt(315.0 / 16.0)
-#pragma once
+#ifndef MAIN_H   /* Include guard */
+#define MAIN_H
+// #define SQRT_PI 1.77245385091  // Approximation of sqrt(pi)
+// #define SQRT_PI3 5.56832799683 // Approximation of sqrt(pi)^3
+// #define S3 sqrt(3.0)
+// #define S3_4 (S3 * 0.5)
+// #define D32 (3.0 / 2.0)
+// #define S3_8 sqrt(3.0 / 8.0)
+// #define S5_8 sqrt(5.0 / 8.0)
+// #define S6 sqrt(6.0)
+// #define S15 sqrt(15.0)
+// #define S15_4 sqrt(15.0 / 4.0)
+// #define S45 sqrt(45.0)
+// #define S45_8 sqrt(45.0 / 8.0)
+// #define D38 (3.0 / 8.0)
+// #define D34 (3.0 / 4.0)
+// #define S5_16 sqrt(5.0 / 16.0)
+// #define S10 sqrt(10.0)
+// #define S10_8 sqrt(10.0 / 8.0)
+// #define S35_4 sqrt(35.0 / 4.0)
+// #define S35_8 sqrt(35.0 / 8.0)
+// #define S35_64 sqrt(35.0 / 64.0)
+// #define S45_4 sqrt(45.0 / 4.0)
+// #define S315_8 sqrt(315.0 / 8.0)
+// #define S315_16 sqrt(315.0 / 16.0)
+// #pragma once
 
 template<typename T, int Rows, int Cols>
 class Matrix2D {

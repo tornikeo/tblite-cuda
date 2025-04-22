@@ -24,17 +24,17 @@ INC_FLAGS := $(addprefix -I,$(INC_DIRS))
 
 # The -MMD and -MP flags together generate Makefiles for us!
 # These files will have .d instead of .o as the output.
-CPPFLAGS := -G -g $(INC_FLAGS)  -MMD -MP 
-CFLAGS := -Xcompiler -Wno-unused-variable
+CPPFLAGS := -G -g $(INC_FLAGS)  -MMD -MP -DCUDA_SEPARABLE_COMPILATION
+NVCCFLAGS := -Xcompiler -Wno-unused-variable
 
 # The final build step.
 $(BUILD_DIR)/$(TARGET_EXEC): $(OBJS)
-	$(NVCC) $(OBJS) -o $@ $(CFLAGS)
+	$(NVCC) $(OBJS) -o $@ $(CPPFLAGS) $(NVCCFLAGS)
 
 # Build step for CUDA source
 $(BUILD_DIR)/%.cu.o: %.cu
 	mkdir -p $(dir $@)
-	$(NVCC) -c $< -o $@ $(CFLAGS)
+	$(NVCC) -c $< -o $@ $(CPPFLAGS) $(NVCCFLAGS)
 
 
 .PHONY: clean

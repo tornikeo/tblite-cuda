@@ -1,6 +1,44 @@
 #include "multipole.h"
 #include "trafo.h"
 
+
+template <int A, int B>
+__device__
+void transform0(
+  const int lj, 
+  const int li, 
+  const float (&cart)[A][A], 
+  float (&sphr)[B][B]
+) {
+  for (size_t i = 0; i < B; i++)
+  {
+   for (size_t j = 0; j < B; j++)
+   {
+      sphr[i][j] = 0;
+   }
+  }
+}
+
+template <int A, int B, int C>
+__device__
+void transform1(
+  const int lj, 
+  const int li, 
+  const float (&cart)[A][A][C], 
+        float (&sphr)[B][B][C]
+) {
+  float tmpmat[B][B];
+
+  for (int i = 0; i < B; i++)
+  {  
+    for (int j = 0; j < B; j++)
+    {
+      tmpmat[i][j] = sphr[i][j][0];
+    }
+  }
+  transform0(lj, li, tmpmat, tmpmat);
+}
+
 /*
 elemental function overlap_1d(moment, alpha) result(overlap)
    integer, intent(in) :: moment
@@ -176,6 +214,8 @@ pure subroutine form_product(a, b, la, lb, d)
 end subroutine form_product
 
 */
+
+
 
 
 __device__
@@ -381,6 +421,9 @@ void multipole_3d(
   q3d[5] = v1d[0][0] * v1d[1][0] * v1d[2][2];
 }
 
+
+
+
 __device__
 void multipole_cgto(
   const cgto_type &cgtoi,
@@ -502,4 +545,17 @@ void multipole_cgto(
   transform0(cgtoj.ang, cgtoi.ang, s3d, overlap);
   transform1(cgtoj.ang, cgtoi.ang, d3d, dpint);
   transform1(cgtoj.ang, cgtoi.ang, q3d, qpint);
+
+  /*   do mli = 1, msao(cgtoi%ang)
+      do mlj = 1, msao(cgtoj%ang)
+         tr = 0.5_wp * (qpint(1, mlj, mli) + qpint(3, mlj, mli) + qpint(6, mlj, mli))
+         qpint(1, mlj, mli) = 1.5_wp * qpint(1, mlj, mli) - tr
+         qpint(2, mlj, mli) = 1.5_wp * qpint(2, mlj, mli)
+         qpint(3, mlj, mli) = 1.5_wp * qpint(3, mlj, mli) - tr
+         qpint(4, mlj, mli) = 1.5_wp * qpint(4, mlj, mli)
+         qpint(5, mlj, mli) = 1.5_wp * qpint(5, mlj, mli)
+         qpint(6, mlj, mli) = 1.5_wp * qpint(6, mlj, mli) - tr
+      end do
+   end do*/
+  
 }

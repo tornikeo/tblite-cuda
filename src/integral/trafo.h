@@ -106,22 +106,24 @@ pure subroutine transform0(lj, li, cart, sphr)
 end subroutine transform0
 
 */
+/* TODO: priority low. Unforutnately this doesn't work */
+/* Somehow, nvcc + template metaprogramming + a separate compilation file, gives an 'undefined reference to ' error. */
+/* I will come back to this. For now the solution is to just copy the funcs to multipole.cu. */
+// template <int A, int B>
+// __device__
+// void transform0(
+//   const int lj, 
+//   const int li, 
+//   const float (&cart)[A][A], 
+//         float (&sphr)[B][B]
+// );
 
-__device__
-void transform0(
-  const int lj, 
-  const int li, 
-  const float (&cart)[mlao(MAXL)][mlao(MAXL)], 
-  float (&sphr)[msao(MAXL)][msao(MAXL)]
-);
-
-template <size_t D>
-__device__
-void transform1(
-  const int lj, 
-  const int li, 
-  const float (&cart)[mlao(MAXL)][mlao(MAXL)][D], 
-  float (&sphr)[msao(MAXL)][msao(MAXL)][D]
-);
-
+// template <int A, int B, int C>
+// __device__
+// void transform1(
+//   const int lj, 
+//   const int li, 
+//   const float (&cart)[A][A][C], 
+//         float (&sphr)[B][B][C]
+// );
 #endif
