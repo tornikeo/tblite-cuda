@@ -16,8 +16,8 @@
 //   real(wp) :: coeff(maxg) = 0.0_wp
 // end type cgto_type
 typedef struct {
-  int ang;
-  int nprim;
+  int ang = -1;
+  int nprim = 0;
   float alpha[MAXG] = {0};
   float coeff[MAXG] = {0};
 } cgto_type;

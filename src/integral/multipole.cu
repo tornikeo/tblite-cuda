@@ -1,4 +1,5 @@
 #include "multipole.h"
+#include "trafo.h"
 
 /*
 elemental function overlap_1d(moment, alpha) result(overlap)
@@ -178,7 +179,7 @@ end subroutine form_product
 
 
 __device__
-/* I don't like this function */
+/* This function is repulsive (to me) */
 inline void form_product(
   const float (&a)[],
   const float (&b)[],
@@ -392,12 +393,6 @@ void multipole_cgto(
   float (&qpint)[msao(MAXL)][msao(MAXL)][6]
 )
 {
-  // constexpr int mlao[] = {1, 3, 6, 10, 15, 21, 28};;
-
-
-
-  // lx -> ((0, 0, 0) (0, 1, 0) (0, 0, 1) (1, 0, 0) (2, 0, 0) (0, 2, 0) (0, 0, 2) (1, 1, 0) (1, 0, 1) (0, 1, 1) (3, 0, 0) (0, 3, 0) (0, 0, 3) (2, 1, 0) (2, 0, 1) (1, 2, 0) (0, 2, 1) (1, 0, 2) (0, 1, 2) (1, 1, 1) (4, 0, 0) (0, 4, 0) (0, 0, 4) (3, 1, 0))
-
   /* TODO: This feels wrong, and is it? */
   constexpr int lx[mlao(MAXL) + lmap(MAXL)][3] = {
     {0,0,0},
@@ -504,4 +499,7 @@ void multipole_cgto(
     }
   }
 
+  transform0(cgtoj.ang, cgtoi.ang, s3d, overlap);
+  transform1(cgtoj.ang, cgtoi.ang, d3d, dpint);
+  transform1(cgtoj.ang, cgtoi.ang, q3d, qpint);
 }
