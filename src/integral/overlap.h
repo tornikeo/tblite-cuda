@@ -14,6 +14,7 @@ real(wp), parameter :: sqrtpi3 = sqrtpi**3
 */
 
 __device__
+/* {1, 3, 5, 7, 9, 11, 13} */
 inline constexpr int msao(int idx) 
 {
   constexpr int values[] = {1, 3, 5, 7, 9, 11, 13}; // TODO: Any better way to do this?
@@ -21,6 +22,7 @@ inline constexpr int msao(int idx)
 }
 
 __device__
+/* {1, 3, 6, 10, 15, 21, 28}; */
 inline constexpr int mlao(int idx)
 {
   constexpr int values[] = {1, 3, 6, 10, 15, 21, 28};
@@ -28,6 +30,7 @@ inline constexpr int mlao(int idx)
 }
 
 __device__
+/* {0, 1, 4, 10, 20, 35, 56} */
 inline constexpr int lmap(int idx)
 {
   constexpr int values[] = {0, 1, 4, 10, 20, 35, 56};
