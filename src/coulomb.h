@@ -2,6 +2,74 @@
 #define COULOMB_H
 #include "limits.h"
 #include "structure.h"
+#include "potential.h"
+#include "wavefunction/type.h"
+
+/*   type :: coulomb_cache
+      real(wp) :: alpha
+      type(wignerseitz_cell) :: wsc
+      real(wp), allocatable :: amat(:, :)
+      real(wp), allocatable :: vvec(:)
+
+      real(wp), allocatable :: cn(:)
+      real(wp), allocatable :: dcndr(:, :, :)
+      real(wp), allocatable :: dcndL(:, :, :)
+      real(wp), allocatable :: mrad(:)
+      real(wp), allocatable :: dmrdcn(:)
+
+      real(wp), allocatable :: amat_sd(:, :, :)
+      real(wp), allocatable :: amat_dd(:, :, :, :)
+      real(wp), allocatable :: amat_sq(:, :, :)
+   contains
+      procedure :: update
+   end type coulomb_cache
+*/
+typedef struct {
+  float alpha;
+  //  cell is unused
+  // other vars are not used for now
+  /*
+   if (.not.allocated(ptr%mrad)) then
+      allocate(ptr%mrad(mol%nat))
+   end if
+   if (.not.allocated(ptr%dmrdcn)) then
+      allocate(ptr%dmrdcn(mol%nat))
+   end if
+
+   if (.not.allocated(ptr%amat_sd)) then
+      allocate(ptr%amat_sd(3, mol%nat, mol%nat))
+   end if
+   if (.not.allocated(ptr%amat_dd)) then
+      allocate(ptr%amat_dd(3, mol%nat, 3, mol%nat))
+   end if
+   if (.not.allocated(ptr%amat_sq)) then
+      allocate(ptr%amat_sq(6, mol%nat, mol%nat))
+   end if
+
+   if (.not.allocated(ptr%cn)) then
+      allocate(ptr%cn(mol%nat))
+   end if
+   if (.not.allocated(ptr%dcndr)) then
+      allocate(ptr%dcndr(3, mol%nat, mol%nat))
+   end if
+   if (.not.allocated(ptr%dcndL)) then
+      allocate(ptr%dcndL(3, 3, mol%nat))
+   end if
+  */
+  float mrad[MAX_NAT];
+  float dmrdcn[MAX_NAT];
+  float amat_sd[MAX_NAT][MAX_NAT][3];
+  float amat_dd[MAX_NAT][3][MAX_NAT][3];
+  float amat_sq[MAX_NAT][MAX_NAT][6];
+  float cn[MAX_NAT];
+  float dcndr[MAX_NAT][MAX_NAT][3];
+  float dcndL[MAX_NAT][3][3];
+  float vvec[MSHELL];
+  float amat[MAX_NSH][MAX_NSH];
+} coulomb_cache;
+
+
+
 
 class coulomb_charge_type 
 {
@@ -72,77 +140,20 @@ typedef struct
 } effective_coulomb;
 
 
-typedef struct 
+class tb_coulomb 
 {
-  effective_coulomb es2;
-  damped_multipole aes2;
+  public:
+    effective_coulomb es2;
+    damped_multipole aes2;
+    __device__ void update(const structure_type &mol, coulomb_cache &cache) const;
+    __device__ void get_potential(
+      const structure_type &mol, 
+      coulomb_cache &cache,
+      const wavefunction_type &wfn,
+      potential_type &pot
+    ) const;
   /* onsite_thirdorder es3; */ // Unused
-} tb_coulomb;
-/*   type :: coulomb_cache
-      real(wp) :: alpha
-      type(wignerseitz_cell) :: wsc
-      real(wp), allocatable :: amat(:, :)
-      real(wp), allocatable :: vvec(:)
-
-      real(wp), allocatable :: cn(:)
-      real(wp), allocatable :: dcndr(:, :, :)
-      real(wp), allocatable :: dcndL(:, :, :)
-      real(wp), allocatable :: mrad(:)
-      real(wp), allocatable :: dmrdcn(:)
-
-      real(wp), allocatable :: amat_sd(:, :, :)
-      real(wp), allocatable :: amat_dd(:, :, :, :)
-      real(wp), allocatable :: amat_sq(:, :, :)
-   contains
-      procedure :: update
-   end type coulomb_cache
-*/
-typedef struct {
-  float alpha;
-  //  cell is unused
-  // other vars are not used for now
-  /*
-   if (.not.allocated(ptr%mrad)) then
-      allocate(ptr%mrad(mol%nat))
-   end if
-   if (.not.allocated(ptr%dmrdcn)) then
-      allocate(ptr%dmrdcn(mol%nat))
-   end if
-
-   if (.not.allocated(ptr%amat_sd)) then
-      allocate(ptr%amat_sd(3, mol%nat, mol%nat))
-   end if
-   if (.not.allocated(ptr%amat_dd)) then
-      allocate(ptr%amat_dd(3, mol%nat, 3, mol%nat))
-   end if
-   if (.not.allocated(ptr%amat_sq)) then
-      allocate(ptr%amat_sq(6, mol%nat, mol%nat))
-   end if
-
-   if (.not.allocated(ptr%cn)) then
-      allocate(ptr%cn(mol%nat))
-   end if
-   if (.not.allocated(ptr%dcndr)) then
-      allocate(ptr%dcndr(3, mol%nat, mol%nat))
-   end if
-   if (.not.allocated(ptr%dcndL)) then
-      allocate(ptr%dcndL(3, 3, mol%nat))
-   end if
-  */
-  float mrad[MAX_NAT];
-  float dmrdcn[MAX_NAT];
-  float amat_sd[MAX_NAT][MAX_NAT][3];
-  float amat_dd[MAX_NAT][3][MAX_NAT][3];
-  float amat_sq[MAX_NAT][MAX_NAT][6];
-  float cn[MAX_NAT];
-  float dcndr[MAX_NAT][MAX_NAT][3];
-  float dcndL[MAX_NAT][3][3];
-  float vvec[MSHELL];
-  float amat[MAX_NSH][MAX_NSH];
-} coulomb_cache;
-
-
-
+};
 __device__
 void update(
   const tb_coulomb &self, 

@@ -18,9 +18,8 @@
 //    !> Atom-resolved quadrupolar potential
 //    real(wp), allocatable :: vqp(:, :, :)
 // contains
-
-typedef struct
-{
+class potential_type {
+public:
   // Atom-resolved charge-dependent potential shift
   float vat[MAX_NSPIN][MAX_NAT];
   // Shell-resolved charge-dependent potential shift
@@ -32,7 +31,10 @@ typedef struct
   float vdp[MAX_NAT][MAX_NSPIN][3];
   // Atom-resolved quadrupolar potential
   float vqp[MAX_NAT][MAX_NSPIN][6];
-} potential_type;
+
+  // Member function to reset all values to 0.0
+  __device__ void reset();
+};
 
 __device__
 void new_potential(

@@ -508,22 +508,33 @@ void aes2_update(
   get_multipole_matrix(self, mol, ptr, ptr.amat_sd, ptr.amat_dd, ptr.amat_sq);
 }
 
+__device__ 
+void tb_coulomb::get_potential(
+  const structure_type &mol, 
+  coulomb_cache &cache,
+  const wavefunction_type &wfn,
+  potential_type &pot
+) const
+{
+
+}
+
 __device__
-void update(
-  const tb_coulomb &self, 
+void tb_coulomb::update(
+  // const tb_coulomb &self, 
   const structure_type &mol,
   coulomb_cache &cache
-)
+) const
 {
   /* if (allocated(self%es2)) then
       call self%es2%update(mol, cache)
    end if */
-  es2_update(self.es2, mol, cache);
+  es2_update(es2, mol, cache);
 
   /*if (allocated(self%aes2)) then
       call self%aes2%update(mol, cache)
    end if*/
-   aes2_update(self.aes2, mol, cache);
+   aes2_update(aes2, mol, cache);
    /* if (allocated(self%es3)) then
       call self%es3%update(mol, cache)
       Not allocated!

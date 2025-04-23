@@ -2,6 +2,32 @@
 #include "potential.h"
 #include "structure.h"
 
+__device__
+void potential_type::reset() {
+  for (int i = 0; i < MAX_NSPIN; ++i) {
+    for (int j = 0; j < MAX_NAT; ++j) {
+      vat[i][j] = 0.0f;
+    }
+    for (int j = 0; j < MAX_NSH; ++j) {
+      vsh[i][j] = 0.0f;
+    }
+    for (int j = 0; j < MAX_NAO; ++j) {
+      vao[i][j] = 0.0f;
+    }
+  }
+
+  for (int i = 0; i < MAX_NAT; ++i) {
+    for (int j = 0; j < MAX_NSPIN; ++j) {
+      for (int k = 0; k < 3; ++k) {
+        vdp[i][j][k] = 0.0f;
+      }
+      for (int k = 0; k < 6; ++k) {
+        vqp[i][j][k] = 0.0f;
+      }
+    }
+  }
+}
+
 /*subroutine new_potential(self, mol, bas, nspin)
    !> Instance of the density dependent potential
    type(potential_type), intent(out) :: self

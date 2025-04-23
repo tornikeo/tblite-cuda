@@ -291,7 +291,7 @@ __device__ void xtb_singlepoint(
   new_potential(pot, mol, calc.bas, 1);
   /* if (allocated(calc%coulomb)) then */
   /* call calc%coulomb%update(mol, ccache) */
-  update(calc.coulomb, mol, ccache);
+  calc.coulomb.update(mol, ccache);
 
   /* call get_occupation(mol, calc%bas, calc%h0, wfn%nocc, wfn%n0at, wfn%n0sh) */
   get_occupation(mol, calc.bas, calc.h0, wfn.nocc, wfn.n0at, wfn.n0sh);
@@ -419,11 +419,11 @@ __device__ void xtb_singlepoint(
          & calc%coulomb, calc%dispersion, calc%interactions, ints, pot, &
          & ccache, dcache, icache, eelec, error)
   */
-  // next_scf(
-  //   iscf, mol, calc.bas, wfn, sygvd, mixer, info,
-  //   calc.coulomb, /*calc.dispersion,*/ /*calc.interactions,*/ ints,
-  //   pot, ccache, /*icache,*/ eelec /*error*/
-  // );
+  next_scf(
+    iscf, mol, calc.bas, wfn, sygvd, mixer, info,
+    calc.coulomb, /*calc.dispersion,*/ /*calc.interactions,*/ ints,
+    pot, ccache, /*icache,*/ eelec /*error*/
+  );
 
   if (prlevel > 0)
   {
@@ -433,8 +433,6 @@ __device__ void xtb_singlepoint(
          sum(eelec) - elast
         /*mixer.get_error()*/);
   }
- 
-  iscf++;
  }
 }
 

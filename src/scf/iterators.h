@@ -108,7 +108,7 @@ void next_scf(
   /*const container_list &interactions,*/
   const integral_type &ints,
   potential_type &pot,
-  tb_coulomb &cache,
+  coulomb_cache &cache,
   /*container_cache &dcache,*/
   /*container_cache &icache,*/
   float (&energies)[MAX_NAT]
