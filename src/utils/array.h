@@ -1,7 +1,11 @@
 #ifndef UTILS_ARRAY_H
 #define UTILS_ARRAY_H
 
-/* TODO: priority high These don't work yet, due to 'not being defined' somehow */
+/* TODO: priority high These don't work yet, 
+    due to 'not being defined' somehow 
+  in general, templates within in other files don't seem to 
+  work. -rdc=true doesn't help this.
+*/
 
 // 1D array
 template <typename T, size_t A>

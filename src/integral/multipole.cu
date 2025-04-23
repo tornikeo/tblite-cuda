@@ -511,14 +511,18 @@ void multipole_cgto(
   const cgto_type &cgtoi,
   const cgto_type &cgtoj,
   const float r2,
-  const float (&vec)[3],
+  const float (&vec)[3], /* TODO: Priority low, this could be a builtin float3 */
   const float intcut,
   float (&overlap)[msao[MAXL]][msao[MAXL]],
-  float (&dpint)[msao[MAXL]][msao[MAXL]][3],
-  float (&qpint)[msao[MAXL]][msao[MAXL]][6]
+  float (&dpint  )[msao[MAXL]][msao[MAXL]][3],
+  float (&qpint  )[msao[MAXL]][msao[MAXL]][6]
 )
 {
-  /* TODO: This feels wrong, and is it? */
+  /* TODO: This feels wrong, and is it?
+     NOTE: I tried moving this outside as an operator[] arr, see msao
+     doesn't work nicely, because 2D arr indexing needs more code. This 
+     is preferred for now.
+  */
   constexpr int lx[mlao(MAXL) + lmap(MAXL)][3] = {
     {0,0,0},
     {0,1,0},
@@ -643,7 +647,13 @@ void multipole_cgto(
   {
     for (int mlj = 0; mlj < msao[cgtoj.ang]; mlj++)
     {
-      
+      float tr = 0.5f * (qpint[mlj][mli][0] + qpint[mlj][mli][2] + qpint[mlj][mli][5]);
+      qpint[mlj][mli][0] = 1.5f * qpint[mlj][mli][0] - tr;
+      qpint[mlj][mli][1] = 1.5f * qpint[mlj][mli][1];
+      qpint[mlj][mli][2] = 1.5f * qpint[mlj][mli][2] - tr;
+      qpint[mlj][mli][3] = 1.5f * qpint[mlj][mli][3];
+      qpint[mlj][mli][4] = 1.5f * qpint[mlj][mli][4];
+      qpint[mlj][mli][5] = 1.5f * qpint[mlj][mli][5] - tr;
     }
   }
 }

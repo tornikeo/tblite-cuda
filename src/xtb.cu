@@ -8,6 +8,8 @@
 #include "adjlist.h"
 #include "wavefunction/type.h"
 #include "integral/type.h"
+#include "scf/broyden.h"
+#include "scf/iterator.h"
 
 template<int N>
 __device__ inline float sum_square(const float (&arr)[N]) {
@@ -202,7 +204,7 @@ __device__ void xtb_singlepoint(
 {
   bool grad, converged, econverged, pconverged;
   float econv, pconv, cutoff, elast, dpmom[3], qpmom[6], nel;
-  
+  int iscf;
   /* 
    if (present(verbosity)) then
       prlevel = verbosity
@@ -242,7 +244,7 @@ __device__ void xtb_singlepoint(
   potential_type pot;
   coulomb_cache ccache;
   integral_type ints;
-
+  broyden_mixer mixer{};
   // gradient(:, :) = 0.0_wp
   // sigma(:, :) = 0.0_wp
   for (size_t i = 0; i < MAX_NAT; i++)
@@ -367,6 +369,72 @@ __device__ void xtb_singlepoint(
     mol, /* lattr, */list, calc.bas, calc.h0, selfenergy, 
     ints.overlap, ints.dipole, ints.quadrupole, ints.hamiltonian
   );
+
+  /*allocate(eelec(mol%nat), source=0.0_wp)*/
+  iscf = 0;
+  converged = false;
+  /*info = calc%variable_info()*/
+  /*call new_broyden(mixer, calc%max_iter, wfn%nspin*get_mixer_dimension(mol, calc%bas, info), &
+      & calc%mixer_damping)*/
+  constexpr scf_info info {
+    /*charge = */shell_resolved,
+    /*dipole = */atom_resolved,
+    /*quadrupole = */atom_resolved
+  };
+  int broyden_ndim = wfn.nspin * get_mixer_dimension(mol, calc.bas, info);
+  printf("Broyden dimension %i\n", broyden_ndim);
+  new_broyden(
+    mixer, 
+    calc.max_iter, 
+    broyden_ndim,
+    calc.mixer_damping
+  );
+
+  // for (int i = 0; i < BROYDEN_NDIM; i++)
+  // {
+  //   for (int j = 0; j < MAX_ITER_DEFAULT; j++)
+  //   {
+  //     printf("%i,", mixer.df[i][j]);
+  //   }
+  //   printf("\n");
+  // }
+
+  /*   if (prlevel > 0) then
+      call ctx%message(repeat("-", 60))
+      call ctx%message("  cycle        total energy    energy error   density error")
+      call ctx%message(repeat("-", 60))
+   end if
+  */
+ if(prlevel > 1)
+ {
+  printf("----------------------------------------------------------------\n");
+  printf("  cycle        total energy    energy error   density error\n");
+  printf("----------------------------------------------------------------\n");
+ }
+ while(!converged && iscf < calc.max_iter)
+ {
+  /*
+        if (prlevel > 0) then
+         call ctx%message(format_string(iscf, "(i7)") // &
+            & format_string(sum(eelec + energies), "(g24.13)") // &
+            & escape(merge(ctx%terminal%green, ctx%terminal%red, econverged)) // &
+            & format_string(sum(eelec) - elast, "(es16.7)") // &
+            & escape(merge(ctx%terminal%green, ctx%terminal%red, pconverged)) // &
+            & format_string(mixer%get_error(), "(es16.7)") // &
+            & escape(ctx%terminal%reset))
+      end if
+  */
+  if (prlevel > 0)
+  {
+    printf("%7d %24.13f %16.7e \n", /*%16.7e*/
+         iscf, 
+         sum(eelec) + sum(energies), 
+         sum(eelec) - elast
+        /*mixer.get_error()*/);
+  }
+ 
+  iscf++;
+ }
 }
 
 __global__ void test_xtb_singlepoint()
@@ -403,6 +471,7 @@ __global__ void test_xtb_singlepoint()
 
   mol.nat = MAX_NAT;
   calc.bas.nsh = MAX_NSH;
+  calc.max_iter = MAX_ITER_DEFAULT;
 
   float accuracy = 0.01f;
   float energy = 0.0f;

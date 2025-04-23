@@ -112,7 +112,8 @@ typedef struct
   // type(halogen_correction), allocatable :: halogen
   // class(dispersion_type), allocatable :: dispersion
   // real(wp) :: mixer_damping = mixer_damping_default
-  // integer :: max_iter = max_iter_default
+  int max_iter = MAX_ITER_DEFAULT;
+  float mixer_damping = MIXER_DAMPING_DEFAULT;
   // logical :: save_integrals = .false.
   // !> List of additional interaction containers
   // type(container_list), allocatable :: interactions

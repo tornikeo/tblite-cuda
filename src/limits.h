@@ -1,6 +1,14 @@
 #ifndef LIMITS_H
 #define LIMITS_H
 
+/* SCF related: Maximun number of SCF iterations */
+#define MAX_ITER_DEFAULT 32 
+/* SCF relataed: Mixer_damping_default */
+#define MIXER_DAMPING_DEFAULT 0.4
+/* SFC related total dims of broyden. TODO: prio low, this should be malloc'd, I think */
+#define BROYDEN_NDIM 95
+
+
 /* same as bas.maxl, maximum angular number l */
 #define MAXL 2 
 /* Twice maximum angular number l * 2 */

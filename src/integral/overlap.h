@@ -20,13 +20,13 @@ real(wp), parameter :: sqrtpi3 = sqrtpi**3
 //   return values[idx];
 // }
 struct MSAOArray {
-  __device__ __host__ inline constexpr int operator[](int idx) const {
+  __device__ inline constexpr int operator[](int idx) const {
     constexpr int values[] = {1, 3, 5, 7, 9, 11, 13};
     return values[idx];
   }
 };
 /* {1, 3, 5, 7, 9, 11, 13} */
-__device__ __host__ inline constexpr MSAOArray msao{};
+__device__ inline constexpr MSAOArray msao{};
 
 __device__
 /* {1, 3, 6, 10, 15, 21, 28}; */
