@@ -267,9 +267,9 @@ void multipole_cgto(
   const float r2,
   const float (&vec)[3],
   const float intcut,
-  float (&overlap)[msao(MAXL)][msao(MAXL)],
-  float (&dpint)[msao(MAXL)][msao(MAXL)][3],
-  float (&qpint)[msao(MAXL)][msao(MAXL)][6]
+  float (&overlap)[msao[MAXL]][msao[MAXL]],
+  float (&dpint)[msao[MAXL]][msao[MAXL]][3],
+  float (&qpint)[msao[MAXL]][msao[MAXL]][6]
 );
 
 #endif 

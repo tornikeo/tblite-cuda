@@ -324,9 +324,9 @@ void get_hamiltonian(
   /*
   allocate(stmp(msao(bas%maxl)**2), dtmpi(3, msao(bas%maxl)**2), qtmpi(6, msao(bas%maxl)**2))
   */ 
-  float stmp[msao(MAXL)][msao(MAXL)] = {0};
-  float dtmpi[msao(MAXL)][msao(MAXL)][3] = {0}; // Notice the dims are reversed
-  float qtmpi[msao(MAXL)][msao(MAXL)][6] = {0};
+  float stmp[msao[MAXL]][msao[MAXL]] = {0};
+  float dtmpi[msao[MAXL]][msao[MAXL]][3] = {0}; // Notice the dims are reversed
+  float qtmpi[msao[MAXL]][msao[MAXL]][6] = {0};
 
   zero(overlap);
   zero(dpint);
@@ -405,8 +405,8 @@ void get_hamiltonian(
           hij = 0.5f * (selfenergy[is + ish] + selfenergy[js + jsh]) *
             h0.hscale[jsh][ish][jzp][izp] * shpoly;
 
-          nao = msao(bas.cgto[jsh][jzp].ang);
-          for (iao = 0; iao < msao(bas.cgto[ish][izp].ang); ++iao)
+          nao = msao[bas.cgto[jsh][jzp].ang];
+          for (iao = 0; iao < msao[bas.cgto[ish][izp].ang]; ++iao)
           {
             for (jao = 0; jao < nao; ++jao)
             {

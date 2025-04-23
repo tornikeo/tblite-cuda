@@ -1,6 +1,6 @@
 #include "multipole.h"
 #include "trafo.h"
-
+#include <cassert>
 
 template <int A, int B>
 __device__
@@ -10,33 +10,115 @@ void transform0(
   const float (&cart)[A][A], 
   float (&sphr)[B][B]
 ) {
-  for (size_t i = 0; i < B; i++)
-  {
-   for (size_t j = 0; j < B; j++)
-   {
-      sphr[i][j] = 0;
-   }
+  if (li == 0 || li == 1) {
+    if (lj == 0 || lj == 1) {
+      // Direct copy
+      for (int i = 0; i < B; i++) {
+        for (int j = 0; j < B; j++) {
+          sphr[i][j] = cart[i][j];
+        }
+      }
+    } else if (lj == 2) {
+      // Transform for d-trafo
+      for (int j = 0; j < B; j++) {
+        sphr[0][j] = cart[2][j] - 0.5f * (cart[0][j] + cart[1][j]);
+        sphr[1][j] = sqrtf(3.0f) * cart[4][j];
+        sphr[2][j] = sqrtf(3.0f) * cart[5][j];
+        sphr[3][j] = sqrtf(3.0f / 4.0f) * (cart[0][j] - cart[1][j]);
+        sphr[4][j] = sqrtf(3.0f) * cart[3][j];
+      }
+    } else {
+      // Unsupported moments higher than g
+      assert(false && "[Fatal] Moments higher than g are not supported");
+    }
+  } else if (li == 2) {
+    if (lj == 0 || lj == 1) {
+      // Transform for d-trafo (transpose)
+      for (int i = 0; i < B; i++) {
+        sphr[i][0] = cart[i][2] - 0.5f * (cart[i][0] + cart[i][1]);
+        sphr[i][1] = sqrtf(3.0f) * cart[i][4];
+        sphr[i][2] = sqrtf(3.0f) * cart[i][5];
+        sphr[i][3] = sqrtf(3.0f / 4.0f) * (cart[i][0] - cart[i][1]);
+        sphr[i][4] = sqrtf(3.0f) * cart[i][3];
+      }
+    } else if (lj == 2) {
+      // Transform for d-trafo (full)
+      for (int i = 0; i < B; i++) {
+        for (int j = 0; j < B; j++) {
+          sphr[i][j] = cart[2][2] 
+            - 0.5f * (cart[2][0] + cart[2][1] + cart[0][2] + cart[1][2]) 
+            + 0.25f * (cart[0][0] + cart[0][1] + cart[1][0] + cart[1][1]);
+        }
+      }
+    } else {
+      // Unsupported moments higher than g
+      assert(false && "[Fatal] Moments higher than g are not supported");
+    }
+  } else {
+    // Unsupported moments higher than g
+    assert(false && "[Fatal] Moments higher than g are not supported");
   }
 }
+
 
 template <int A, int B, int C>
 __device__
 void transform1(
   const int lj, 
   const int li, 
-  const float (&cart)[A][A][C], 
+  const float (&cart)[A][A][C], /* TODO: priority medium. use better axes here, C should be first. */
         float (&sphr)[B][B][C]
 ) {
-  float tmpmat[B][B];
+  for (int k = 0; k < C; ++k) {
+    float tmpmat[B][B] = {0};
 
-  for (int i = 0; i < B; i++)
-  {  
-    for (int j = 0; j < B; j++)
-    {
-      tmpmat[i][j] = sphr[i][j][0];
+    for (int i = 0; i < B; ++i) {
+      for (int j = 0; j < B; ++j) {
+        tmpmat[i][j] = cart[k][i][j];
+      }
+    }
+
+    transform0(lj, li, tmpmat, tmpmat);
+
+    for (int i = 0; i < B; ++i) {
+      for (int j = 0; j < B; ++j) {
+        sphr[k][i][j] = tmpmat[i][j];
+      }
     }
   }
-  transform0(lj, li, tmpmat, tmpmat);
+}
+
+template <int A, int B, int C>
+__device__
+void transform2(
+  const int lj, 
+  const int li, 
+  const float (&cart)[A][A][C][C], /* TODO: priority medium. use better axes here, C should be first. */
+        float (&sphr)[B][B][C][C]
+) {
+  for (int l = 0; l < A; ++l) {
+    for (int k = 0; k < A; ++k) {
+      float tmp_cart[C][C] = {0};
+      float tmp_sphr[C][C] = {0};
+
+      // Extract a 2D slice from the 4D cart array
+      for (int i = 0; i < C; ++i) {
+        for (int j = 0; j < C; ++j) {
+          tmp_cart[i][j] = cart[k][l][i][j];
+        }
+      }
+
+      // Perform the transform on the 2D slice
+      transform0(lj, li, tmp_cart, tmp_sphr);
+
+      // Store the transformed 2D slice back into the 4D sphr array
+      for (int i = 0; i < C; ++i) {
+        for (int j = 0; j < C; ++j) {
+          sphr[k][l][i][j] = tmp_sphr[i][j];
+        }
+      }
+    }
+  }
 }
 
 /*
@@ -431,9 +513,9 @@ void multipole_cgto(
   const float r2,
   const float (&vec)[3],
   const float intcut,
-  float (&overlap)[msao(MAXL)][msao(MAXL)],
-  float (&dpint)[msao(MAXL)][msao(MAXL)][3],
-  float (&qpint)[msao(MAXL)][msao(MAXL)][6]
+  float (&overlap)[msao[MAXL]][msao[MAXL]],
+  float (&dpint)[msao[MAXL]][msao[MAXL]][3],
+  float (&qpint)[msao[MAXL]][msao[MAXL]][6]
 )
 {
   /* TODO: This feels wrong, and is it? */
@@ -557,5 +639,11 @@ void multipole_cgto(
          qpint(6, mlj, mli) = 1.5_wp * qpint(6, mlj, mli) - tr
       end do
    end do*/
-  
+  for (int mli = 0; mli < msao[cgtoi.ang]; mli++)
+  {
+    for (int mlj = 0; mlj < msao[cgtoj.ang]; mlj++)
+    {
+      
+    }
+  }
 }

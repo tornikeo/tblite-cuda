@@ -13,13 +13,20 @@ real(wp), parameter :: sqrtpi = sqrt(pi)
 real(wp), parameter :: sqrtpi3 = sqrtpi**3 
 */
 
-__device__
+// __device__
+// inline constexpr int msao(int idx) 
+// {
+//   constexpr int values[] = ; // TODO: Any better way to do this?
+//   return values[idx];
+// }
+struct MSAOArray {
+  __device__ __host__ inline constexpr int operator[](int idx) const {
+    constexpr int values[] = {1, 3, 5, 7, 9, 11, 13};
+    return values[idx];
+  }
+};
 /* {1, 3, 5, 7, 9, 11, 13} */
-inline constexpr int msao(int idx) 
-{
-  constexpr int values[] = {1, 3, 5, 7, 9, 11, 13}; // TODO: Any better way to do this?
-  return values[idx];
-}
+__device__ __host__ inline constexpr MSAOArray msao{};
 
 __device__
 /* {1, 3, 6, 10, 15, 21, 28}; */
