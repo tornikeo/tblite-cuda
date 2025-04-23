@@ -9,7 +9,8 @@
 #include "wavefunction/type.h"
 #include "integral/type.h"
 #include "scf/broyden.h"
-#include "scf/iterator.h"
+#include "scf/iterators.h"
+#include "lapack/sygvd.h"
 
 template<int N>
 __device__ inline float sum_square(const float (&arr)[N]) {
@@ -244,7 +245,9 @@ __device__ void xtb_singlepoint(
   potential_type pot;
   coulomb_cache ccache;
   integral_type ints;
-  broyden_mixer mixer{};
+  broyden_mixer mixer;
+  sygvd_solver sygvd;
+
   // gradient(:, :) = 0.0_wp
   // sigma(:, :) = 0.0_wp
   for (size_t i = 0; i < MAX_NAT; i++)
@@ -289,7 +292,6 @@ __device__ void xtb_singlepoint(
   /* if (allocated(calc%coulomb)) then */
   /* call calc%coulomb%update(mol, ccache) */
   update(calc.coulomb, mol, ccache);
-
 
   /* call get_occupation(mol, calc%bas, calc%h0, wfn%nocc, wfn%n0at, wfn%n0sh) */
   get_occupation(mol, calc.bas, calc.h0, wfn.nocc, wfn.n0at, wfn.n0sh);
@@ -413,17 +415,16 @@ __device__ void xtb_singlepoint(
  }
  while(!converged && iscf < calc.max_iter)
  {
-  /*
-        if (prlevel > 0) then
-         call ctx%message(format_string(iscf, "(i7)") // &
-            & format_string(sum(eelec + energies), "(g24.13)") // &
-            & escape(merge(ctx%terminal%green, ctx%terminal%red, econverged)) // &
-            & format_string(sum(eelec) - elast, "(es16.7)") // &
-            & escape(merge(ctx%terminal%green, ctx%terminal%red, pconverged)) // &
-            & format_string(mixer%get_error(), "(es16.7)") // &
-            & escape(ctx%terminal%reset))
-      end if
+  /* call next_scf(iscf, mol, calc%bas, wfn, sygvd, mixer, info, &
+         & calc%coulomb, calc%dispersion, calc%interactions, ints, pot, &
+         & ccache, dcache, icache, eelec, error)
   */
+  // next_scf(
+  //   iscf, mol, calc.bas, wfn, sygvd, mixer, info,
+  //   calc.coulomb, /*calc.dispersion,*/ /*calc.interactions,*/ ints,
+  //   pot, ccache, /*icache,*/ eelec /*error*/
+  // );
+
   if (prlevel > 0)
   {
     printf("%7d %24.13f %16.7e \n", /*%16.7e*/

@@ -1,3 +1,5 @@
+#ifndef COULOMB_H
+#define COULOMB_H
 #include "limits.h"
 #include "structure.h"
 
@@ -55,10 +57,10 @@ typedef struct
   gfn_ncoord_type ncoord;
 } damped_multipole;
 
-class onsite_thirdorder
-{
+// class onsite_thirdorder
+// {
 
-};
+// };
 
 typedef struct 
 { 
@@ -74,7 +76,7 @@ typedef struct
 {
   effective_coulomb es2;
   damped_multipole aes2;
-  onsite_thirdorder es3;
+  /* onsite_thirdorder es3; */ // Unused
 } tb_coulomb;
 /*   type :: coulomb_cache
       real(wp) :: alpha
@@ -156,3 +158,5 @@ void ncoord_get_cn(
   float (&dcndr)[MAX_NAT][MAX_NAT][3],
   float (&dcndL)[MAX_NAT][3][3]
 );
+
+#endif
