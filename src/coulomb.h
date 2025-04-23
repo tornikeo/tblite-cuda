@@ -5,6 +5,19 @@
 #include "potential.h"
 #include "wavefunction/type.h"
 
+__device__
+void get_mrad(
+  const structure_type &mol,
+  const float shift,
+  const float kexp,
+  const float rmax,
+  const float (&rad)[MAX_NELEM],
+  const float (&valence_cn)[MAX_NELEM],
+  const float (&cn)[MAX_NAT],
+  float (&mrad)[MAX_NAT],
+  float (&dmrdcn)[MAX_NAT]
+);
+
 /*   type :: coulomb_cache
       real(wp) :: alpha
       type(wignerseitz_cell) :: wsc
@@ -110,8 +123,9 @@ type, extends(coulomb_type) :: damped_multipole
    contains
    */
 
-typedef struct
-{
+class damped_multipole
+{ 
+  public:
   float kdmp3 = 0;
   float kdmp5 = 0;
   float shift = 0;
@@ -123,21 +137,32 @@ typedef struct
   float qkernel[MAX_NAT];
 
   gfn_ncoord_type ncoord;
-} damped_multipole;
+  __device__ void update(const structure_type &mol, coulomb_cache &cache) const;
+  __device__ void get_multipole_matrix(
+    // const damped_multipole &self,
+    const structure_type &mol,
+    coulomb_cache &cache,
+    float (&amat_sd)[MAX_NAT][MAX_NAT][3],
+    float (&amat_dd)[MAX_NAT][3][MAX_NAT][3],
+    float (&amat_sq)[MAX_NAT][MAX_NAT][6]
+  ) const;
+};
 
 // class onsite_thirdorder
 // {
 
 // };
 
-typedef struct 
+class effective_coulomb /* TODO: Good candidate for upgrading to a class */
 { 
+  public:
   float hubbard[MSHELL][MSHELL][MAX_NELEM][MAX_NELEM];
   int nshell[MAX_NAT];
   int offset[MAX_NSH];
   float gexp;
   float rcut;
-} effective_coulomb;
+  __device__ void update(const structure_type &mol, coulomb_cache &cache) const;
+} ;
 
 
 class tb_coulomb 

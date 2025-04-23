@@ -77,10 +77,10 @@ void get_amat_0d(
 }
 
 __device__
-void es2_update(
-  const effective_coulomb &self,
+void effective_coulomb::update(
+  // const  &self,
   const structure_type &mol, 
-  coulomb_cache &cache)
+  coulomb_cache &cache) const
 {
   for (int i = 0; i < MAX_NSH; i++)
   {
@@ -93,7 +93,26 @@ void es2_update(
       /* periodic not supported */
   /* else */
   /*  call get_amat_0d(mol, self%nshell, self%offset, self%hubbard, self%gexp, amat) */
-  get_amat_0d(mol, self.nshell, self.offset, self.hubbard, self.gexp, cache.amat);
+  get_amat_0d(mol, nshell, offset, hubbard, gexp, cache.amat);
+}
+
+__device__
+void damped_multipole::update(
+  // const damped_multipole &self,
+  const structure_type &mol,
+  coulomb_cache &ptr
+) const {
+  /* allocs are done within struct itsef */
+  /* if (allocated(self%ncoord)) then */
+  ncoord_get_cn(ncoord, mol, ptr.cn, ptr.dcndr, ptr.dcndL);
+
+  /* get_mrad(mol, self%shift, self%kexp, self%rmax, self%rad, self%valence_cn, &
+      & ptr%cn, ptr%mrad, ptr%dmrdcn) */
+  get_mrad(mol, shift, kexp, rmax, rad, valence_cn, 
+        ptr.cn, ptr.mrad, ptr.dmrdcn);
+
+  /* call get_multipole_matrix(self, mol, ptr, ptr%amat_sd, ptr%amat_dd, ptr%amat_sq) */
+  get_multipole_matrix(mol, ptr, ptr.amat_sd, ptr.amat_dd, ptr.amat_sq);
 }
 
 /*
@@ -454,14 +473,14 @@ void get_multipole_matrix_0d(
 ...
 */
 __device__
-void get_multipole_matrix(
-  const damped_multipole &self,
+void damped_multipole::get_multipole_matrix(
+  // const damped_multipole &self,
   const structure_type &mol,
   coulomb_cache &cache,
   float (&amat_sd)[MAX_NAT][MAX_NAT][3],
   float (&amat_dd)[MAX_NAT][3][MAX_NAT][3],
   float (&amat_sq)[MAX_NAT][MAX_NAT][6]
-) {
+) const {
   // amat_sd
 
   // amat_sd(:, :, :) = 0.0_wp
@@ -486,27 +505,9 @@ void get_multipole_matrix(
   /* else */
   /* call get_multipole_matrix_0d(mol, cache%mrad, self%kdmp3, self%kdmp5, &
          & amat_sd, amat_dd, amat_sq) */
-  get_multipole_matrix_0d(mol, cache.mrad, self.kdmp3, self.kdmp5, amat_sd, amat_dd, amat_sq);
+  get_multipole_matrix_0d(mol, cache.mrad, kdmp3, kdmp5, amat_sd, amat_dd, amat_sq);
 }
 
-__device__
-void aes2_update(
-  const damped_multipole &self,
-  const structure_type &mol,
-  coulomb_cache &ptr
-) {
-  /* allocs are done within struct itsef */
-  /* if (allocated(self%ncoord)) then */
-  ncoord_get_cn(self.ncoord, mol, ptr.cn, ptr.dcndr, ptr.dcndL);
-
-  /* get_mrad(mol, self%shift, self%kexp, self%rmax, self%rad, self%valence_cn, &
-      & ptr%cn, ptr%mrad, ptr%dmrdcn) */
-  get_mrad(mol, self.shift, self.kexp, self.rmax, self.rad, self.valence_cn, 
-        ptr.cn, ptr.mrad, ptr.dmrdcn);
-
-  /* call get_multipole_matrix(self, mol, ptr, ptr%amat_sd, ptr%amat_dd, ptr%amat_sq) */
-  get_multipole_matrix(self, mol, ptr, ptr.amat_sd, ptr.amat_dd, ptr.amat_sq);
-}
 
 __device__ 
 void tb_coulomb::get_potential(
@@ -529,15 +530,16 @@ void tb_coulomb::update(
   /* if (allocated(self%es2)) then
       call self%es2%update(mol, cache)
    end if */
-  es2_update(es2, mol, cache);
+  es2.update(mol, cache);
 
   /*if (allocated(self%aes2)) then
       call self%aes2%update(mol, cache)
    end if*/
-   aes2_update(aes2, mol, cache);
+   aes2.update(mol, cache);
    /* if (allocated(self%es3)) then
       call self%es3%update(mol, cache)
       Not allocated!
    end if
    */
+
 }
