@@ -3,6 +3,7 @@
 #include <cassert>
 #include <cstdlib>
 #include "xtb.h"
+#include "utils/gpu.h"
 #include "basis/type.h"
 #include "potential.h"
 #include "adjlist.h"
@@ -488,5 +489,7 @@ void xtb_test()
   cudaDeviceSetLimit(cudaLimitStackSize, 1024 * sizeof(float));
   cudaDeviceSetLimit(cudaLimitMallocHeapSize, 128 * 1024 * 1024);
   test_xtb_singlepoint<<<1, 1>>>();
-  cudaDeviceSynchronize();
+  gpuErrchk( cudaPeekAtLastError() );
+  gpuErrchk( cudaDeviceSynchronize() );
+
 }

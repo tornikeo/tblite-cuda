@@ -64,7 +64,7 @@ void next_scf(
   {
     // next(mixer);
     // get_mixer(mixer, bas, wfn, info); // Update wfn from mixer, pretty much
-    assert(false && "Unimplemented");
+    // assert(false && "Unimplemented");
   }
   pot.reset(); /* Dipping toes in class member functions */
   iscf++;

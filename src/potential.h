@@ -28,9 +28,9 @@ public:
   float vao[MAX_NSPIN][MAX_NAO];
 
   // Atom-resolved dipolar potential
-  float vdp[MAX_NAT][MAX_NSPIN][3];
+  float vdp[MAX_NSPIN][MAX_NAT][3];
   // Atom-resolved quadrupolar potential
-  float vqp[MAX_NAT][MAX_NSPIN][6];
+  float vqp[MAX_NSPIN][MAX_NAT][6];
 
   // Member function to reset all values to 0.0
   __device__ void reset();

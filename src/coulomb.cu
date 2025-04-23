@@ -1,5 +1,6 @@
 
 #include "coulomb.h"
+#include "blas/level2.h"
 
 __device__
 void get_amat_0d(
@@ -94,6 +95,16 @@ void effective_coulomb::update(
   /* else */
   /*  call get_amat_0d(mol, self%nshell, self%offset, self%hubbard, self%gexp, amat) */
   get_amat_0d(mol, nshell, offset, hubbard, gexp, cache.amat);
+}
+
+
+__device__ void effective_coulomb::get_potential(
+  const structure_type &mol, 
+  coulomb_cache &cache, 
+  const wavefunction_type &wfn, 
+  potential_type &pot) const
+{
+  symv(MAX_NSH, &cache.amat[0][0], wfn.qsh[1], pot.vsh[1], /*beta=*/1.0);
 }
 
 __device__
@@ -508,6 +519,49 @@ void damped_multipole::get_multipole_matrix(
   get_multipole_matrix_0d(mol, cache.mrad, kdmp3, kdmp5, amat_sd, amat_dd, amat_sq);
 }
 
+/* 
+__device__ void gemv312(const float* A, const float* x, float* y, 
+  size_t dim1, size_t dim2, size_t dim3, 
+  float alpha = 1.0f, float beta = 0.0f, 
+  bool transpose = false)
+  {...}
+*/
+/*
+__device__ 
+void gemv(const float* A, const float* x, float* y, 
+  size_t rows, size_t cols, 
+  float alpha = 1.0f, 
+  float beta = 0.0f, 
+  bool transpose = false) {...}
+  */
+__device__ 
+void damped_multipole::get_potential(const structure_type &mol, coulomb_cache &cache, const wavefunction_type &wfn, potential_type &pot) const
+{
+  /* 
+   call gemv(ptr%amat_sd, wfn%qat(:, 1), pot%vdp(:, :, 1), beta=1.0_wp)
+   call gemv(ptr%amat_sd, wfn%dpat(:, :, 1), pot%vat(:, 1), beta=1.0_wp, trans="T")
+
+   call gemv(ptr%amat_dd, wfn%dpat(:, :, 1), pot%vdp(:, :, 1), beta=1.0_wp)
+
+   call gemv(ptr%amat_sq, wfn%qat(:, 1), pot%vqp(:, :, 1), beta=1.0_wp)
+   call gemv(ptr%amat_sq, wfn%qpat(:, :, 1), pot%vat(:, 1), beta=1.0_wp, trans="T")
+
+   call get_kernel_potential(mol, self%dkernel, wfn%dpat(:, :, 1), pot%vdp(:, :, 1))
+   call get_kernel_potential(mol, self%qkernel, wfn%qpat(:, :, 1), pot%vqp(:, :, 1))
+  */
+//  gemv312(&cache.amat_sd[0][0][0], &wfn.qat[0], &pot.vdp[0][0], )
+  /* TODO: GO FROM HERE */
+  // gemv(&cache.amat_sd[0][0][0], &wfn.qat[0], &pot.vdp[0][0], mol.nat, mol.nat * 3, 1.0f, 1.0f, false);
+  // gemv(&cache.amat_sd[0][0][0], &wfn.dpat[0][0], &pot.vat[0], mol.nat, mol.nat * 3, 1.0f, 1.0f, true);
+
+  // gemv312(&cache.amat_dd[0][0][0][0], &wfn.dpat[0][0], &pot.vdp[0][0], mol.nat, 3, mol.nat, 1.0f, 1.0f, false);
+
+  // gemv(&cache.amat_sq[0][0][0], &wfn.qat[0], &pot.vqp[0][0], mol.nat, mol.nat * 6, 1.0f, 1.0f, false);
+  // gemv(&cache.amat_sq[0][0][0], &wfn.qpat[0][0], &pot.vat[0], mol.nat, mol.nat * 6, 1.0f, 1.0f, true);
+
+  // get_kernel_potential(mol, dkernel, &wfn.dpat[0][0], &pot.vdp[0][0]);
+  // get_kernel_potential(mol, qkernel, &wfn.qpat[0][0], &pot.vqp[0][0]);
+}
 
 __device__ 
 void tb_coulomb::get_potential(
@@ -517,7 +571,9 @@ void tb_coulomb::get_potential(
   potential_type &pot
 ) const
 {
+  es2.get_potential(mol, cache, wfn, pot);
 
+  aes2.get_potential(mol, cache, wfn, pot);
 }
 
 __device__

@@ -146,6 +146,8 @@ class damped_multipole
     float (&amat_dd)[MAX_NAT][3][MAX_NAT][3],
     float (&amat_sq)[MAX_NAT][MAX_NAT][6]
   ) const;
+  __device__ void get_potential(const structure_type &mol, coulomb_cache &cache, 
+    const wavefunction_type &wfn, potential_type &pot) const;
 };
 
 // class onsite_thirdorder
@@ -162,7 +164,9 @@ class effective_coulomb /* TODO: Good candidate for upgrading to a class */
   float gexp;
   float rcut;
   __device__ void update(const structure_type &mol, coulomb_cache &cache) const;
-} ;
+  __device__ void get_potential(const structure_type &mol, coulomb_cache &cache, 
+  const wavefunction_type &wfn, potential_type &pot) const;
+};
 
 
 class tb_coulomb 

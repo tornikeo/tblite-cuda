@@ -88,14 +88,14 @@ typedef struct
   float nel[2];
   float n0at[MAX_NAT] = {0};
   float n0sh[MAX_NSH] = {0};
-  float density[MAX_NAO][MAX_NAO][MAX_NSPIN] = {0};
-  float coeff[MAX_NAO][MAX_NAO][MAX_NSPIN] = {0};
-  float emo[MAX_NAO][MAX_NSPIN] = {0};
-  float focc[MAX_NAO][MAX_NSPIN] = {0};
-  float qat[MAX_NAT][MAX_NSPIN] = {0};
-  float qsh[MAX_NSH][MAX_NSPIN] = {0};
-  float dpat[3][MAX_NAT][MAX_NSPIN] = {0};
-  float qpat[5][MAX_NAT][MAX_NSPIN] = {0};
+  float density[MAX_NSPIN][MAX_NAO][MAX_NAO] = {0};
+  float coeff[MAX_NSPIN][MAX_NAO][MAX_NAO] = {0};
+  float emo[MAX_NSPIN][MAX_NAO] = {0};
+  float focc[MAX_NSPIN][MAX_NAO] = {0};
+  float qat[MAX_NSPIN][MAX_NAT] = {0};
+  float qsh[MAX_NSPIN][MAX_NSH] = {0};
+  float dpat[MAX_NSPIN][MAX_NAT][3] = {0};
+  float qpat[MAX_NSPIN][MAX_NAT][6] = {0};
 } wavefunction_type;
 
 /*
