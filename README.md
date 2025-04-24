@@ -1,7 +1,21 @@
-# tblite-cuda (unfinished sample)
+# tblite-cuda (work-in-progress)
 
-A rather sad attempt at porting tblite singlepoint to CUDA C++. Not useful as is.
+This is a work-in-progress translation of [tblite](https://github.com/tblite/tblite/) from from FORTRAN to [CUDA C++](https://docs.nvidia.com/cuda/cuda-c-programming-guide/).
 
-This repo contains bottom-up translation efforts from tblite to CUDA C++. Ongoing work is finding a translation for fortran array expressions to C++.
+# Building from source
 
-[src/main.cu](./src/main.cu) contains most of the main code. [src/test.cu](./src/test.cu) contains some really simple driver code to test that the code doesn't throw exceptions. Current *unachieved* goal is to build up to `get_hamiltonian_gradient` function. We are not yet there.
+To build tblite-cuda, you need to have a CUDA compiler (`nvcc`) and a CUDA-capable GPU, with [compute capability](https://developer.nvidia.com/cuda-gpus) of 8.0 or more. Building is done through makefile:
+
+```sh
+make
+```
+
+This will build an executable into `build/main.bin`, which can be used, like:
+
+```sh
+compute-sanitizer ./build/main.bin
+```
+
+# Current work
+
+Implementing `xtb_singlepoint` as a CUDA `__device__` function. Once created, this should allow running `xtb_singlepoint` in a batched fashion on a GPU. 
