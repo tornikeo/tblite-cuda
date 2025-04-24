@@ -519,6 +519,61 @@ void damped_multipole::get_multipole_matrix(
   get_multipole_matrix_0d(mol, cache.mrad, kdmp3, kdmp5, amat_sd, amat_dd, amat_sq);
 }
 
+/*
+!> Get multipolar anisotropic potential contribution
+subroutine get_kernel_potential(mol, kernel, mpat, vm)
+   !> Molecular structure data
+   type(structure_type), intent(in) :: mol
+   !> Multipole kernel
+   real(wp), intent(in) :: kernel(:)
+   !> Atomic multipole momemnt
+   real(wp), intent(in) :: mpat(:, :)
+   !> Potential shoft on atomic multipole moment
+   real(wp), intent(inout) :: vm(:, :)
+
+   integer :: iat, izp
+   real(wp) :: mpscale(size(mpat, 1)  mpat, vm
+   )
+
+   mpscale(:) = 1
+   if (size(mpat, 1) == 6) mpscale([2, 4, 5]) = 2
+
+   do iat = 1, mol%nat
+      izp = mol%id(iat)
+      vm(:, iat) = vm(:, iat) + 2*kernel(izp) * mpat(:, iat) * mpscale
+   end do
+end subroutine get_kernel_potential
+  
+*/
+
+template <int D>
+__device__
+void get_kernel_potential(
+  const structure_type &mol,
+  const float (&kernel)[MAX_NELEM], 
+  const float (&mpat)[MAX_NAT][D], 
+  float (&vm)[MAX_NAT][D]
+)
+{
+  float mpscale[D];
+  for (int i = 0; i < D; i++) {
+    mpscale[i] = 1.0f;
+  }
+  if (D == 6) {
+    mpscale[1] = 2.0f;
+    mpscale[3] = 2.0f;
+    mpscale[4] = 2.0f;
+  }
+
+  for (int iat = 0; iat < mol.nat; iat++) {
+    int izp = mol.id[iat];
+    for (int d = 0; d < D; d++) {
+      vm[iat][d] += 2.0f * kernel[izp] * mpat[iat][d] * mpscale[d];
+    }
+  }
+}
+
+
 /* 
 __device__ void gemv312(const float* A, const float* x, float* y, 
   size_t dim1, size_t dim2, size_t dim3, 
@@ -534,6 +589,8 @@ void gemv(const float* A, const float* x, float* y,
   float beta = 0.0f, 
   bool transpose = false) {...}
   */
+
+
 __device__ 
 void damped_multipole::get_potential(const structure_type &mol, coulomb_cache &cache, const wavefunction_type &wfn, potential_type &pot) const
 {
@@ -550,17 +607,21 @@ void damped_multipole::get_potential(const structure_type &mol, coulomb_cache &c
    call get_kernel_potential(mol, self%qkernel, wfn%qpat(:, :, 1), pot%vqp(:, :, 1))
   */
 //  gemv312(&cache.amat_sd[0][0][0], &wfn.qat[0], &pot.vdp[0][0], )
+  gemv312(&cache.amat_sd[0][0][0], &wfn.qat[0][0], &pot.vdp[0][0][0], mol.nat, mol.nat * 3, 1.0f, 1.0f, false);
+  gemv312(&cache.amat_sd[0][0][0], &wfn.dpat[0][0][0], &pot.vat[0][0], mol.nat, mol.nat * 3, 1.0f, 1.0f, true);
+
+  /*     vdp := amat_dd @ dpat    */
+  /* 3 9 3 9 x 3 9 -> 3 9 */
+  gemv422(&cache.amat_dd[0][0][0][0], &wfn.dpat[0][0][0], &pot.vdp[0][0][0], mol.nat, 3, mol.nat, 1.0f, 1.0f, false);
+
+  // call gemv(ptr%amat_sq, wfn%qat(:, 1), pot%vqp(:, :, 1), beta=1.0_wp)
+  // call gemv(ptr%amat_sq, wfn%qpat(:, :, 1), pot%vat(:, 1), beta=1.0_wp, trans="T")
+  gemv312(&cache.amat_sq[0][0][0], &wfn.qat[0][0], &pot.vqp[0][0][0], mol.nat, mol.nat * 6, 1.0f, 1.0f, false);
+  gemv312(&cache.amat_sq[0][0][0], &wfn.qpat[0][0][0], &pot.vat[0][0], mol.nat, mol.nat * 6, 1.0f, 1.0f, true);
+  
   /* TODO: GO FROM HERE */
-  // gemv(&cache.amat_sd[0][0][0], &wfn.qat[0], &pot.vdp[0][0], mol.nat, mol.nat * 3, 1.0f, 1.0f, false);
-  // gemv(&cache.amat_sd[0][0][0], &wfn.dpat[0][0], &pot.vat[0], mol.nat, mol.nat * 3, 1.0f, 1.0f, true);
-
-  // gemv312(&cache.amat_dd[0][0][0][0], &wfn.dpat[0][0], &pot.vdp[0][0], mol.nat, 3, mol.nat, 1.0f, 1.0f, false);
-
-  // gemv(&cache.amat_sq[0][0][0], &wfn.qat[0], &pot.vqp[0][0], mol.nat, mol.nat * 6, 1.0f, 1.0f, false);
-  // gemv(&cache.amat_sq[0][0][0], &wfn.qpat[0][0], &pot.vat[0], mol.nat, mol.nat * 6, 1.0f, 1.0f, true);
-
-  // get_kernel_potential(mol, dkernel, &wfn.dpat[0][0], &pot.vdp[0][0]);
-  // get_kernel_potential(mol, qkernel, &wfn.qpat[0][0], &pot.vqp[0][0]);
+  get_kernel_potential(mol, dkernel, &wfn.dpat[0][0], &pot.vdp[0][0]);
+  get_kernel_potential(mol, qkernel, &wfn.qpat[0][0], &pot.vqp[0][0]);
 }
 
 __device__ 

@@ -27,5 +27,11 @@ __device__ void gemv312(const float* A, const float* x, float* y,
   float alpha = 1.0f, float beta = 0.0f, 
   bool transpose = false);
 
+
+__device__ void gemv422(const float* A, const float* x, float* y, 
+    size_t dim1, size_t dim2, size_t dim3, size_t dim4, 
+    float alpha = 1.0f, float beta = 0.0f, 
+    bool transpose = false);
+
 void test_blas();
 #endif

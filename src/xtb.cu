@@ -491,5 +491,4 @@ void xtb_test()
   test_xtb_singlepoint<<<1, 1>>>();
   gpuErrchk( cudaPeekAtLastError() );
   gpuErrchk( cudaDeviceSynchronize() );
-
 }

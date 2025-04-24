@@ -1,4 +1,5 @@
 #include "../limits.h"
+#include "../utils/gpu.h"
 #include <stdio.h>
 #include <cassert>
 
@@ -118,7 +119,80 @@ __global__ void test_gemv312() {
     }
 }
 
+
+/*
+subroutine wrap_dgemv422(amat, xvec, yvec, alpha, beta, trans)
+   real(dp), intent(in), contiguous, target :: amat(:, :, :, :)
+   real(dp), intent(in), contiguous, target :: xvec(:, :)
+   real(dp), intent(inout), contiguous, target :: yvec(:, :)
+   real(dp), intent(in), optional :: alpha
+   real(dp), intent(in), optional :: beta
+   character(len=1), intent(in), optional :: trans
+   real(dp), pointer :: aptr(:, :), yptr(:), xptr(:)
+   character(len=1) :: tra
+   if (present(trans)) then
+      tra = trans
+   else
+      tra = 'n'
+   end if
+   aptr(1:size(amat, 1)*size(amat, 2), 1:size(amat, 3)*size(amat, 4)) => amat
+   xptr(1:size(xvec, 1)*size(xvec, 2)) => xvec
+   yptr(1:size(yvec, 1)*size(yvec, 2)) => yvec
+   call wrap_gemv(aptr, xptr, yptr, alpha, beta, tra)
+end subroutine wrap_dgemv422
+*/
+
+__device__ void gemv422(const float* A, const float* x, float* y, 
+  size_t dim1, size_t dim2, size_t dim3, size_t dim4, 
+  float alpha = 1.0f, float beta = 0.0f, 
+  bool transpose = false) {
+    size_t flattened_rows = dim1 * dim2;
+    size_t flattened_cols = dim3 * dim4;
+
+    if (!transpose) {
+        // Flatten the first two dimensions and the last two dimensions, then call gemv
+        gemv(A, x, y, flattened_rows, flattened_cols, alpha, beta, false);
+    } else {
+        // Transpose case: treat A as if it were transposed
+        gemv(A, x, y, flattened_cols, flattened_rows, alpha, beta, true);
+    }
+}
+
+__global__ void test_gemv422() {
+    // Define a small 4D matrix A (2x2x2x3), vector x (6), and vector y (4)
+    const int dim1 = 2, dim2 = 2, dim3 = 2, dim4 = 3;
+    const int flattened_rows = dim1 * dim2;
+    const int flattened_cols = dim3 * dim4;
+    float A[flattened_rows * flattened_cols] = {
+        1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 
+        7.0f, 8.0f, 9.0f, 10.0f, 11.0f, 12.0f, 
+        13.0f, 14.0f, 15.0f, 16.0f, 17.0f, 18.0f, 
+        19.0f, 20.0f, 21.0f, 22.0f, 23.0f, 24.0f
+    };
+    float x[flattened_cols] = {1.0f, 1.0f, 1.0f, 1.0f, 1.0f, 1.0f};
+    float y[flattened_rows] = {0.0f, 0.0f, 0.0f, 0.0f};
+
+    // Call the __device__ gemv422 function directly
+    gemv422(A, x, y, dim1, dim2, dim3, dim4);
+
+    // Print the result
+    printf("Result y: [%f, %f, %f, %f]\n", y[0], y[1], y[2], y[3]);
+
+    // Expected results
+    float expected_y[flattened_rows] = {21.0f, 57.0f, 93.0f, 129.0f};
+
+    // Assert the results
+    for (int i = 0; i < flattened_rows; ++i) {
+        assert(fabs(y[i] - expected_y[i]) < 1e-5 && "Assertion failed for y[i]");
+    }
+}
+
 void test_blas() {
-    test_gemv<<<1, 1>>>();
-    test_gemv312<<<1, 1>>>();
+  cudaDeviceSetLimit(cudaLimitStackSize, 1024 * sizeof(float));
+  cudaDeviceSetLimit(cudaLimitMallocHeapSize, 128 * 1024 * 1024);
+  test_gemv<<<1, 1>>>();
+  test_gemv312<<<1, 1>>>();
+  test_gemv422<<<1, 1>>>();
+  gpuErrchk( cudaPeekAtLastError() );
+  gpuErrchk( cudaDeviceSynchronize() );
 }
