@@ -2,7 +2,7 @@
 #include "xtb.h"
 #include <iostream>
 #include <assert.h>
-
+#include "blas/level2.h"
 
 int main()
 {
@@ -35,6 +35,8 @@ int main()
     // test_call_multipole_grad_cgto<<<1, 1>>>();
     // cudaDeviceSynchronize();
     // printf("Hello, world!\n");
+    
+    test_blas();
     xtb_test();
     return 0;
 }

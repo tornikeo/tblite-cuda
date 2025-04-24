@@ -27,4 +27,5 @@ __device__ void gemv312(const float* A, const float* x, float* y,
   float alpha = 1.0f, float beta = 0.0f, 
   bool transpose = false);
 
+void test_blas();
 #endif
