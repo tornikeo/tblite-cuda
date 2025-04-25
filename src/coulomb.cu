@@ -620,8 +620,8 @@ void damped_multipole::get_potential(const structure_type &mol, coulomb_cache &c
   gemv312(&cache.amat_sq[0][0][0], &wfn.qpat[0][0][0], &pot.vat[0][0], mol.nat, mol.nat * 6, 1.0f, 1.0f, true);
   
   /* TODO: GO FROM HERE */
-  get_kernel_potential(mol, dkernel, &wfn.dpat[0][0], &pot.vdp[0][0]);
-  get_kernel_potential(mol, qkernel, &wfn.qpat[0][0], &pot.vqp[0][0]);
+  get_kernel_potential(mol, dkernel, wfn.dpat[0], pot.vdp[0]);
+  get_kernel_potential(mol, qkernel, wfn.qpat[0], pot.vqp[0]);
 }
 
 __device__ 
@@ -635,6 +635,11 @@ void tb_coulomb::get_potential(
   es2.get_potential(mol, cache, wfn, pot);
 
   aes2.get_potential(mol, cache, wfn, pot);
+
+  es3.get_potential(mol, cache, wfn, pot);
+  /*if (allocated(self%es3)) then
+      call self%es3%get_potential(mol, cache, wfn, pot) // UNUSED
+   end if*/
 }
 
 __device__
@@ -659,4 +664,25 @@ void tb_coulomb::update(
    end if
    */
 
+}
+
+
+void onsite_thirdorder::get_potential(
+  const structure_type &mol, const coulomb_cache &cache, 
+  const wavefunction_type &wfn, potential_type &pot) const
+{
+  if (shell_resolved) {
+    for (int iat = 0; iat < mol.nat; iat++) {
+      int izp = mol.id[iat];
+      int ii = ish_at[iat];
+      for (int ish = 0; ish < nsh_at[iat]; ish++) {
+        pot.vsh[0][ii + ish] += wfn.qsh[0][ii + ish] * wfn.qsh[0][ii + ish] * hubbard_derivs[izp][ish];
+      }
+    }
+  } else {
+    for (int iat = 0; iat < mol.nat; iat++) {
+      int izp = mol.id[iat];
+      pot.vat[0][iat] += wfn.qat[0][iat] * wfn.qat[0][iat] * hubbard_derivs[izp][0];
+    }
+  }
 }

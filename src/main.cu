@@ -37,6 +37,6 @@ int main()
     // printf("Hello, world!\n");
     
     test_blas();
-    xtb_test();
+    test_xtb();
     return 0;
 }

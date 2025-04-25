@@ -57,7 +57,7 @@ void next_scf(
   float (&energies)[MAX_NAT]
   /*error_type &error*/
 ) {
-  printf("NEXT SCF %i\n", iscf);
+  // printf("NEXT SCF %i\n", iscf);
   float eao[MAX_NAO] = {0};
   float ts = 0;
   if (iscf > 0)

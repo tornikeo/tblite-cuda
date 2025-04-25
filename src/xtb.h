@@ -125,6 +125,6 @@ typedef struct
   // dispersion_type dispersion;
 } xtb_calculator;
 
-void xtb_test();
+void test_xtb();
 
 #endif

@@ -14,18 +14,9 @@
 #include "lapack/sygvd.h"
 
 template<int N>
-__device__ inline float sum_square(const float (&arr)[N]) {
-  float val = 0;
-  for (int i = 0; i < N; i++)
-  { 
-    val += arr[i] * arr[i];
-  }
-  return val;
-}
-
-template<int N>
 __device__ inline float sum(const float (&arr)[N]) {
   float val = 0;
+  #pragma unroll
   for (int i = 0; i < N; i++)
   { 
     val += arr[i];
@@ -109,7 +100,8 @@ inline void get_repulsion_derivs(
         rij[i] = mol.xyz[iat][i] - mol.xyz[jat][i]; // trans is assumed to be zero
       }
 
-      r2 = sum_square(rij);
+      // r2 = sum_square(rij);
+      r2 = rij[0]*rij[0] + rij[1]*rij[1] + rij[2]*rij[2];
       if(r2 > cutoff2 || r2 < 1.0e-12) continue;
       r1 = sqrt(r2);
 
@@ -385,7 +377,11 @@ __device__ void xtb_singlepoint(
     /*quadrupole = */atom_resolved
   };
   int broyden_ndim = wfn.nspin * get_mixer_dimension(mol, calc.bas, info);
-  printf("Broyden dimension %i\n", broyden_ndim);
+  if(prlevel > 1)
+  {
+    printf("Broyden dimension %i\n", broyden_ndim);
+  }
+
   new_broyden(
     mixer, 
     calc.max_iter, 
@@ -478,17 +474,36 @@ __global__ void test_xtb_singlepoint()
 
   float gradient[MAX_NAT][3] = {0};
   float sigma[3][3] = {0.0};
-  int verbosity = 2;
+  int verbosity = -1;
 
   xtb_singlepoint(mol, calc, wfn, accuracy, energy, gradient, sigma, verbosity);
   // printf("Energy: %f\n", energy);
 }
 
-void xtb_test()
+void test_xtb()
 {
   cudaDeviceSetLimit(cudaLimitStackSize, 1024 * sizeof(float));
-  cudaDeviceSetLimit(cudaLimitMallocHeapSize, 128 * 1024 * 1024);
-  test_xtb_singlepoint<<<1, 1>>>();
+  cudaDeviceSetLimit(cudaLimitMallocHeapSize, 1024 * 512);
+
+  cudaEvent_t start, stop;
+  float elapsedTime;
+
+  cudaEventCreate(&start);
+  cudaEventCreate(&stop);
+
+  cudaEventRecord(start, 0);
+  int dimGrid = 1;
+  int dimBlock = 1;
+  test_xtb_singlepoint<<<dimGrid, dimBlock>>>();
   gpuErrchk( cudaPeekAtLastError() );
   gpuErrchk( cudaDeviceSynchronize() );
+  cudaEventRecord(stop, 0);
+  cudaEventSynchronize(stop);
+
+  cudaEventElapsedTime(&elapsedTime, start, stop);
+  printf("Execution time: %f ms\n", elapsedTime);
+  printf("Per thread: %f ms\n", elapsedTime / (dimGrid * dimBlock));
+
+  cudaEventDestroy(start);
+  cudaEventDestroy(stop);
 }

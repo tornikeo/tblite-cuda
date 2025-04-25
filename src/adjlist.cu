@@ -83,7 +83,6 @@ void new_adjacency_list(
   const bool complete
 )
 {
-  /* TODO: GO FROM HERE */
   bool cmplt = complete;
 
   // Initialize inl array

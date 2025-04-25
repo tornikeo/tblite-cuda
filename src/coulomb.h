@@ -133,8 +133,8 @@ class damped_multipole
   float rmax = 0;
   float rad[MAX_NELEM];
   float valence_cn[MAX_NELEM];
-  float dkernel[MAX_NAT];
-  float qkernel[MAX_NAT];
+  float dkernel[MAX_NELEM];
+  float qkernel[MAX_NELEM];
 
   gfn_ncoord_type ncoord;
   __device__ void update(const structure_type &mol, coulomb_cache &cache) const;
@@ -168,12 +168,27 @@ class effective_coulomb /* TODO: Good candidate for upgrading to a class */
   const wavefunction_type &wfn, potential_type &pot) const;
 };
 
+class onsite_thirdorder
+{
+  public:
+  int nsh_at[MAX_NAT];
+  int ish_at[MAX_NAT];
+  float hubbard_derivs[MAX_NELEM][3];
+  bool shell_resolved = true;
+  __device__ 
+  void get_potential(
+    const structure_type &mol, 
+    const coulomb_cache &cache, /* Unused var */
+    const wavefunction_type &wfn, 
+    potential_type &pot) const;
+};
 
 class tb_coulomb 
 {
   public:
     effective_coulomb es2;
     damped_multipole aes2;
+    onsite_thirdorder es3;
     __device__ void update(const structure_type &mol, coulomb_cache &cache) const;
     __device__ void get_potential(
       const structure_type &mol, 
