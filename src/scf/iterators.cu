@@ -1,6 +1,7 @@
 #include <stdio.h>
-#include "iterators.h"
 #include <cassert>
+#include "iterators.h"
+#include "potential.h"
 
 __device__
 // constexpr 
@@ -36,6 +37,123 @@ int get_mixer_dimension(
   return ndim;
 }
 
+/*
+subroutine set_mixer(mixer, wfn, info)
+   use tblite_scf_info, only : atom_resolved, shell_resolved
+   type(broyden_mixer), intent(inout) :: mixer
+   type(wavefunction_type), intent(in) :: wfn
+   type(scf_info), intent(in) :: info
+
+   select case(info%charge)
+   case(atom_resolved)
+      call mixer%set(wfn%qat)
+   case(shell_resolved)
+      call mixer%set(wfn%qsh)
+   end select
+
+   select case(info%dipole)
+   case(atom_resolved)
+      call mixer%set(wfn%dpat)
+   end select
+
+   select case(info%quadrupole)
+   case(atom_resolved)
+      call mixer%set(wfn%qpat)
+   end select
+end subroutine set_mixer
+*/
+
+__device__ 
+void set_mixer(
+  broyden_mixer &mixer,
+  const wavefunction_type &wfn,
+  const scf_info &info
+)
+{
+  // printf("info.charge: %d\n", info.charge);
+  // printf("info.dipole: %d\n", info.dipole);
+  // printf("info.quadrupole: %d\n", info.quadrupole);
+  switch (info.charge)
+  {
+  case atom_resolved:
+    mixer.set(&wfn.qat[0][0], MAX_NAT);
+    break;
+  case shell_resolved:
+    mixer.set(&wfn.qsh[0][0], MAX_NSH);
+  default:
+    break;
+  }
+  switch (info.dipole)
+  {
+  case atom_resolved:
+    mixer.set(&wfn.dpat[0][0][0], 3 * MAX_NAT);
+    break;
+  default:
+    break;
+  }
+
+  switch (info.quadrupole)
+  {
+  case atom_resolved:
+    mixer.set(&wfn.qpat[0][0][0], 6 * MAX_NAT);
+    break;
+  default:
+    break;
+  }
+
+}
+
+/*
+
+subroutine get_density(wfn, solver, ints, ts, error)
+   !> Tight-binding wavefunction data
+   type(wavefunction_type), intent(inout) :: wfn
+   !> Solver for the general eigenvalue problem
+   class(solver_type), intent(inout) :: solver
+   !> Integral container
+   type(integral_type), intent(in) :: ints
+   !> Electronic entropy
+   real(wp), intent(out) :: ts
+   !> Error handling
+   type(error_type), allocatable, intent(out) :: error
+...
+*/
+__device__
+void get_density(
+  wavefunction_type &wfn,
+  sygvd_solver &solver,
+  const integral_type &ints,
+  float &ts
+  /* error &err*/
+)
+{
+  /*    
+  real(wp) :: e_fermi, stmp(2)
+  real(wp), allocatable :: focc(:)
+  integer :: spin
+   */
+  float e_fermi = 0;
+  float stmp[2] = {0};
+  float focc[MAX_NAO] = {0};
+  int spin = 0;
+
+  switch (wfn.nspin)
+  {
+  case 1:
+    solver.solve(
+      &wfn.coeff[0], 
+      &ints.overlap,
+      &wfn.emo[0]
+      /*error,*/
+    )
+    // wfn.focc
+    break;
+  case 2:
+    assert(false&&"Unimplemented");
+  default:
+    break;
+  }
+}
 
 __device__
 void next_scf(
@@ -66,7 +184,7 @@ void next_scf(
     // get_mixer(mixer, bas, wfn, info); // Update wfn from mixer, pretty much
     // assert(false && "Unimplemented");
   }
-  pot.reset(); /* Dipping toes in class member functions */
+  pot.reset(); 
   iscf++;
 
   /* if (present(coulomb)) then */
@@ -74,9 +192,15 @@ void next_scf(
     coulomb.get_potential(mol, cache, wfn, pot);
   /*end if*/
   /*if (present(dispersion)) then
-    call dispersion%get_potential(mol, dcache, wfn, pot)
+    call dispersion%get_potential(mol, dcache, wfn, pot) // Not yet done
   end if*/
   /*if (present(interactions)) then
-    call interactions%get_potential(mol, icache, wfn, pot)
+    call interactions%get_potential(mol, icache, wfn, pot) // Not relevant for EIMS
   end if*/
+
+  add_pot_to_h1(bas, ints, pot, wfn.coeff);
+
+  set_mixer(mixer, wfn, info);
+
+  get_density(wfn, solver, ints, ts, /*error*/);
 }

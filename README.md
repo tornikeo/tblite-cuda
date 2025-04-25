@@ -19,3 +19,7 @@ compute-sanitizer ./build/main.bin
 # Current work
 
 Implementing `xtb_singlepoint` as a CUDA `__device__` function. Once created, this should allow running `xtb_singlepoint` in a batched fashion on a GPU. 
+
+# Worklog
+
+- Implemented next_scf up to `get_density` call, which requires a blas `sygvd` call, to solve a generalized eigenvalue `A*x=lamd*B*x` problem. I would like to use cuSOLVER for this due to perf and simplicity reasons.

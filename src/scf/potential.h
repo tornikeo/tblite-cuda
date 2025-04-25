@@ -1,8 +1,10 @@
-#ifndef POTENTIAL_H
-#define POTENTIAL_H
-#include "limits.h"
-#include "structure.h"
-#include "basis/type.h"
+#ifndef SCF_POTENTIAL_H
+#define SCF_POTENTIAL_H
+#include "../limits.h"
+#include "../integral/type.h"
+#include "../structure.h"
+#include "../basis/type.h"
+
 
 // !> Container for density dependent potential-shifts
 // type :: potential_type
@@ -42,6 +44,40 @@ void new_potential(
   const structure_type &mol, 
   const basis_type &bas,
   const int nspin
+);
+
+
+/*
+!> Expand an atom-resolved potential shift to a shell-resolved potential shift
+subroutine add_vat_to_vsh(bas, vat, vsh)
+   !> Basis set information
+   type(basis_type), intent(in) :: bas
+   !> Atom-resolved charge-dependent potential shift
+   real(wp), intent(in) :: vat(:, :)
+   !> Shell-resolved charge-dependent potential shift
+   real(wp), intent(inout) :: vsh(:, :)
+
+   integer :: iat, ish, ii, spin
+
+   ! $omp parallel do schedule(runtime) collapse(2) default(none) &
+   ! $omp reduction(+:vsh) shared(bas, vat) private(spin, ii, ish, iat)
+   do spin = 1, size(vat, 2)
+      do iat = 1, size(vat, 1)
+         ii = bas%ish_at(iat)
+         do ish = 1, bas%nsh_at(iat)
+            vsh(ii+ish, spin) = vsh(ii+ish, spin) + vat(iat, spin)
+         end do
+      end do
+   end do
+end subroutine add_vat_to_vsh
+*/
+
+__device__ 
+void add_pot_to_h1(
+  const basis_type &bas, 
+  const integral_type &ints, 
+  potential_type &pot, 
+  float (&h1)[MAX_NSPIN][MAX_NAO][MAX_NAO]
 );
 
 #endif

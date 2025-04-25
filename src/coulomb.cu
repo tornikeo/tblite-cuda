@@ -608,7 +608,7 @@ void damped_multipole::get_potential(const structure_type &mol, coulomb_cache &c
   */
 //  gemv312(&cache.amat_sd[0][0][0], &wfn.qat[0], &pot.vdp[0][0], )
   gemv312(&cache.amat_sd[0][0][0], &wfn.qat[0][0], &pot.vdp[0][0][0], mol.nat, mol.nat * 3, 1.0f, 1.0f, false);
-  gemv312(&cache.amat_sd[0][0][0], &wfn.dpat[0][0][0], &pot.vat[0][0], mol.nat, mol.nat * 3, 1.0f, 1.0f, true);
+  gemv321(&cache.amat_sd[0][0][0], &wfn.dpat[0][0][0], &pot.vat[0][0], mol.nat, mol.nat * 3, 1.0f, 1.0f, true);
 
   /*     vdp := amat_dd @ dpat    */
   /* 3 9 3 9 x 3 9 -> 3 9 */
@@ -617,7 +617,7 @@ void damped_multipole::get_potential(const structure_type &mol, coulomb_cache &c
   // call gemv(ptr%amat_sq, wfn%qat(:, 1), pot%vqp(:, :, 1), beta=1.0_wp)
   // call gemv(ptr%amat_sq, wfn%qpat(:, :, 1), pot%vat(:, 1), beta=1.0_wp, trans="T")
   gemv312(&cache.amat_sq[0][0][0], &wfn.qat[0][0], &pot.vqp[0][0][0], mol.nat, mol.nat * 6, 1.0f, 1.0f, false);
-  gemv312(&cache.amat_sq[0][0][0], &wfn.qpat[0][0][0], &pot.vat[0][0], mol.nat, mol.nat * 6, 1.0f, 1.0f, true);
+  gemv321(&cache.amat_sq[0][0][0], &wfn.qpat[0][0][0], &pot.vat[0][0], mol.nat, mol.nat * 6, 1.0f, 1.0f, true);
   
   /* TODO: GO FROM HERE */
   get_kernel_potential(mol, dkernel, wfn.dpat[0], pot.vdp[0]);

@@ -1,7 +1,11 @@
 #ifndef LAPACK_SYGVD_H
 #define LAPACK_SYGVD_H
-typedef struct
+class sygvd_solver
 {
-  
-} sygvd_solver;
+  public:
+  __device__
+  void solve(
+    const float (&hmat)
+  )
+} ;
 #endif

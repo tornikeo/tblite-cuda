@@ -47,7 +47,9 @@ subroutine new_broyden(self, memory, ndim, damp)
 end subroutine new_broyden
 */
 
-typedef struct{
+class broyden_mixer
+{
+  public:
   int ndim = BROYDEN_NDIM;
   int memory = MAX_ITER_DEFAULT;
   int iter = 0;
@@ -64,7 +66,10 @@ typedef struct{
   float qlast_in[BROYDEN_NDIM] = {0};
   float omega[MAX_ITER_DEFAULT] = {0};
   float q_in[BROYDEN_NDIM] = {0};
-} broyden_mixer;
+  
+  __device__ 
+  void set(const float *qvec, int size);
+} ;
 
 
 __device__

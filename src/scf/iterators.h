@@ -6,11 +6,11 @@
 #include "../limits.h"
 #include "../structure.h"
 #include "../integral/type.h"
-#include "../potential.h"
 #include "broyden.h"
 #include "../lapack/sygvd.h"
 #include "../wavefunction/type.h"
 #include "../coulomb.h"
+#include "potential.h"
 
 /*
 function get_mixer_dimension(mol, bas, info) result(ndim)

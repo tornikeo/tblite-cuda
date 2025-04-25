@@ -43,3 +43,20 @@ void new_broyden(
   //   self.omega[i] = 0.0f;
   // }
 }
+
+/*
+subroutine set_1d(self, qvec)
+   class(broyden_mixer), intent(inout) :: self
+   real(wp), intent(in) :: qvec(:)
+   self%q_in(self%iset+1:self%iset+size(qvec)) = qvec
+   self%iset = self%iset + size(qvec)
+end subroutine set_1d*/
+
+__device__
+void broyden_mixer::set(const float *qvec, int size)
+{
+  for (int i = 0; i < size; ++i) {
+    q_in[iset + i] = qvec[i];
+  }
+  iset += size;
+}

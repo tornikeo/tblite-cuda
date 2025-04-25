@@ -2,7 +2,7 @@
 #define COULOMB_H
 #include "limits.h"
 #include "structure.h"
-#include "potential.h"
+#include "scf/potential.h"
 #include "wavefunction/type.h"
 
 __device__
