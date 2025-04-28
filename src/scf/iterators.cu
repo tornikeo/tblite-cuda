@@ -1,6 +1,8 @@
 #include <stdio.h>
 #include <cassert>
 #include "iterators.h"
+#include "../lapack/sygvd.h"
+#include "../wavefunction/fermi.h"
 #include "potential.h"
 
 __device__
@@ -141,12 +143,49 @@ void get_density(
   {
   case 1:
     solver.solve(
-      &wfn.coeff[0], 
-      &ints.overlap,
-      &wfn.emo[0]
+      wfn.coeff[0], 
+      ints.overlap,
+      wfn.emo[0]
       /*error,*/
-    )
-    // wfn.focc
+    );
+    /* wfn%focc(:, :) = 0.0_wp */
+    for (int i = 0; i < MAX_NSPIN; ++i) {
+      for (int j = 0; j < MAX_NAO; j++)
+      {
+        wfn.focc[i][j] = 0.0f;
+      }
+    }
+
+
+    /* do spin = 1, 2
+         call get_fermi_filling(wfn%nel(spin), wfn%kt, wfn%emo(:, 1), &
+            & wfn%homo(spin), focc, e_fermi, stmp(spin))
+         wfn%focc(:, 1) = wfn%focc(:, 1) + focc
+      end do
+    */
+   for (int spin = 0; spin < 2; spin++)
+   {
+     get_fermi_filling(
+       wfn.nel[spin], 
+       wfn.kt,
+       wfn.emo[0],
+       wfn.homo[spin],
+       focc,
+       e_fermi,
+       stmp[spin]
+     );
+     for (int i = 0; i < MAX_NAO; i++)
+     {
+      wfn.focc[0][i] += focc[i];
+     }
+   }
+   ts += (stmp[0] + stmp[1]);
+   /*       call get_density_matrix(wfn%focc(:, 1), wfn%coeff(:, :, 1), wfn%density(:, :, 1)) */
+    get_density_matrix(
+      wfn.focc[0],
+      wfn.coeff[0],
+      wfn.density[0]
+    );
     break;
   case 2:
     assert(false&&"Unimplemented");
@@ -202,5 +241,7 @@ void next_scf(
 
   set_mixer(mixer, wfn, info);
 
-  get_density(wfn, solver, ints, ts, /*error*/);
+  get_density(wfn, solver, ints, ts /*,error*/);
+
+  
 }

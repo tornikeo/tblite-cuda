@@ -234,12 +234,12 @@ __device__ void xtb_singlepoint(
   float dEdcn[MAX_NAT] = {0};
   float wdensity[MAX_NSPIN][MAX_NAO][MAX_NAO] = {0};
 
-  adjacency_list list;
-  potential_type pot;
-  coulomb_cache ccache;
-  integral_type ints;
-  broyden_mixer mixer;
-  sygvd_solver sygvd;
+  adjacency_list list = {0};
+  potential_type pot = {0};
+  coulomb_cache ccache = {0};
+  integral_type ints = {0};
+  broyden_mixer mixer = {0};
+  sygvd_solver sygvd = {0};
 
   // gradient(:, :) = 0.0_wp
   // sigma(:, :) = 0.0_wp

@@ -2,6 +2,7 @@
 #include "xtb.h"
 #include <iostream>
 #include <assert.h>
+#include "lapack/sygvd.h"
 #include "blas/level2.h"
 
 int main()
@@ -36,7 +37,9 @@ int main()
     // cudaDeviceSynchronize();
     // printf("Hello, world!\n");
     
+    test_sygvd();
     test_blas();
     test_xtb();
+
     return 0;
 }

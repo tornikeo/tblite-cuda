@@ -124,4 +124,11 @@ end subroutine get_alpha_beta_occupation
 
 __device__ void get_alpha_beta_occupation(
     float nocc, float nuhf, float &nalp, float &nbet);
+
+__device__
+void get_density_matrix(
+  const float (&focc)[MAX_NAO],
+  const float (&coeff)[MAX_NAO][MAX_NAO],
+  float (&pmat)[MAX_NAO][MAX_NAO]
+);
 #endif
