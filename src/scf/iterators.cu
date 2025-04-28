@@ -3,6 +3,7 @@
 #include "iterators.h"
 #include "../lapack/sygvd.h"
 #include "../wavefunction/fermi.h"
+#include "../wavefunction/mulliken.h"
 #include "potential.h"
 
 __device__
@@ -103,6 +104,42 @@ void set_mixer(
     break;
   }
 
+}
+
+/*
+subroutine get_qat_from_qsh(bas, qsh, qat)
+   type(basis_type), intent(in) :: bas
+   real(wp), intent(in) :: qsh(:, :)
+   real(wp), intent(out) :: qat(:, :)
+
+   integer :: ish, ispin
+
+   qat(:, :) = 0.0_wp
+   ! $omp parallel do schedule(runtime) collapse(2) default(none) &
+   ! $omp reduction(+:qat) shared(bas, qsh) private(ish)
+   do ispin = 1, size(qsh, 2)
+      do ish = 1, size(qsh, 1)
+         qat(bas%sh2at(ish), ispin) = qat(bas%sh2at(ish), ispin) + qsh(ish, ispin)
+      end do
+   end do
+end subroutine get_qat_from_qsh
+
+*/
+
+__device__
+void get_qat_from_qsh
+(
+ const basis_type &bas,
+ const float (&qsh)[MAX_NSPIN][MAX_NSH],
+ float (&qat)[MAX_NSPIN][MAX_NAT]  
+)
+{
+  for (int ispin = 0; ispin < MAX_NSPIN; ++ispin) {
+    for (int ish = 0; ish < MAX_NSH; ++ish) {
+      int atom_index = bas.sh2at[ish];
+      qat[ispin][atom_index] += qsh[ispin][ish];
+    }
+  }
 }
 
 /*
@@ -243,5 +280,24 @@ void next_scf(
 
   get_density(wfn, solver, ints, ts /*,error*/);
 
-  
+  /* call get_mulliken_shell_charges(bas, ints%overlap, wfn%density, wfn%n0sh, &
+      & wfn%qsh)*/
+  get_mulliken_shell_charges(
+    bas,
+    ints.overlap,
+    wfn.density,
+    wfn.n0sh,
+    wfn.qsh
+  );
+
+  /*    call get_qat_from_qsh(bas, wfn%qsh, wfn%qat) */
+  get_qat_from_qsh(bas, wfn.qsh, wfn.qat);
+
+  /*call get_mulliken_atomic_multipoles(bas, ints%dipole, wfn%density, &
+      & wfn%dpat)*/
+  get_mulliken_atomic_multipoles(
+    bas, ints.dipole, wfn.density, wfn.dpat);
+
+  // call get_mulliken_atomic_multipoles(bas, ints%quadrupole, wfn%density, &
+  //     & wfn%qpat
 }
