@@ -148,6 +148,12 @@ class damped_multipole
   ) const;
   __device__ void get_potential(const structure_type &mol, coulomb_cache &cache, 
     const wavefunction_type &wfn, potential_type &pot) const;
+  __device__ void get_energy(
+    const structure_type &mol, 
+    coulomb_cache &cache,
+    const wavefunction_type &wfn,
+    float (&energies)[MAX_NAT]
+  ) const;
 };
 
 // class onsite_thirdorder
@@ -164,8 +170,13 @@ class effective_coulomb /* TODO: Good candidate for upgrading to a class */
   float gexp;
   float rcut;
   __device__ void update(const structure_type &mol, coulomb_cache &cache) const;
-  __device__ void get_potential(const structure_type &mol, coulomb_cache &cache, 
-  const wavefunction_type &wfn, potential_type &pot) const;
+  __device__ void get_potential(const structure_type &mol, coulomb_cache &cache, const wavefunction_type &wfn, potential_type &pot) const;
+  __device__ void get_energy(
+    const structure_type &mol, 
+    coulomb_cache &cache,
+    const wavefunction_type &wfn,
+    float (&energies)[MAX_NAT]
+  ) const;
 };
 
 class onsite_thirdorder
@@ -181,6 +192,12 @@ class onsite_thirdorder
     const coulomb_cache &cache, /* Unused var */
     const wavefunction_type &wfn, 
     potential_type &pot) const;
+  __device__ void get_energy(
+      const structure_type &mol, 
+      coulomb_cache &cache,
+      const wavefunction_type &wfn,
+      float (&energies)[MAX_NAT]
+    ) const;
 };
 
 class tb_coulomb 
@@ -195,6 +212,12 @@ class tb_coulomb
       coulomb_cache &cache,
       const wavefunction_type &wfn,
       potential_type &pot
+    ) const;
+    __device__ void get_energy(
+      const structure_type &mol, 
+      coulomb_cache &cache,
+      const wavefunction_type &wfn,
+      float (&energies)[MAX_NAT]
     ) const;
   /* onsite_thirdorder es3; */ // Unused
 };

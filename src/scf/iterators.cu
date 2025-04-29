@@ -251,7 +251,68 @@ void get_density(
   }
 }
 
+/*
+subroutine get_electronic_energy(h0, density, energies)
+   real(wp), intent(in) :: h0(:, :)
+   real(wp), intent(in) :: density(:, :, :)
+   real(wp), intent(inout) :: energies(:)
 
+   integer :: iao, jao, spin
+
+   ! $omp parallel do collapse(3) schedule(runtime) default(none) &
+   ! $omp reduction(+:energies) shared(h0, density) private(spin, iao, jao)
+   do spin = 1, size(density, 3)
+      do iao = 1, size(density, 2)
+         do jao = 1, size(density, 1)
+            energies(iao) = energies(iao) + h0(jao, iao) * density(jao, iao, spin)
+         end do
+      end do
+   end do
+end subroutine get_electronic_energy
+*/
+__device__
+void get_electronic_energy(
+  const float (&h0)[MAX_NAO][MAX_NAO], 
+  const float (&density)[MAX_NSPIN][MAX_NAO][MAX_NAO], 
+  float (&energies)[MAX_NAO]
+)
+{
+  for (int spin = 0; spin < MAX_NSPIN; ++spin) {
+    for (int iao = 0; iao < MAX_NAO; ++iao) {
+      for (int jao = 0; jao < MAX_NAO; ++jao) {
+        energies[iao] += h0[iao][jao] * density[spin][iao][jao];
+      }
+    }
+  }
+}
+
+/*
+subroutine reduce(reduced, full, map)
+   real(wp), intent(inout) :: reduced(:)
+   real(wp), intent(in) :: full(:)
+   integer, intent(in) :: map(:)
+
+   integer :: ix
+
+   do ix = 1, size(map)
+      reduced(map(ix)) = reduced(map(ix)) + full(ix)
+   end do
+end subroutine reduce
+*/
+__device__
+void reduce(
+  float (&reduced)[MAX_NAT],
+  const float (&full)[MAX_NAO],
+  const int (&map)[MAX_NAO]
+)
+{
+  for (int ix = 0; ix < MAX_NAO; ++ix) {
+    int mapped_index = map[ix];
+    if (mapped_index >= 0 && mapped_index < MAX_NAT) {
+      reduced[mapped_index] += full[ix];
+    }
+  }
+}
 
 __device__
 void next_scf(
@@ -328,4 +389,36 @@ void next_scf(
     wfn.qpat);
 
   diff_mixer(mixer, wfn, info);
+
+  /* allocate(eao(bas%nao), source=0.0_wp) */
+  for (int i = 0; i < bas.nao; i++)
+  {
+    eao[i] = 0;
+  }
+  
+  /*call get_electronic_energy(ints%hamiltonian, wfn%density, eao)*/
+  get_electronic_energy(ints.hamiltonian, wfn.density, eao);
+
+  /* energies(:) = ts / size(energies) */
+  for (int i = 0; i < mol.nat; i++)
+  {
+    energies[i] = ts / mol.nat;
+  }
+  
+  /* call reduce(energies, eao, bas%ao2at) */
+  reduce(energies, eao, bas.ao2at);
+
+  /* if (present(coulomb)) then */
+    /*call coulomb%get_energy(mol, cache, wfn, energies)*/
+    coulomb.get_energy(mol, cache, wfn, energies);
+  /* end if */
+  /* if (present(dispersion)) then
+      call dispersion%get_energy(mol, dcache, wfn, energies)
+   end if */ // Dispersion is ignored for now
+  /*
+  if (present(interactions)) then
+      call interactions%get_energy(mol, icache, wfn, energies)
+   end if
+  */ // Interactions are ignored for now
+  
 }

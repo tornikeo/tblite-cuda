@@ -421,7 +421,7 @@ __device__ void xtb_singlepoint(
     calc.coulomb, /*calc.dispersion,*/ /*calc.interactions,*/ ints,
     pot, ccache, /*icache,*/ eelec /*error*/
   );
-
+  
   if (prlevel > 0)
   {
     printf("%7d %24.13f %16.7e \n", /*%16.7e*/

@@ -1,6 +1,7 @@
 
 #include "coulomb.h"
 #include "blas/level2.h"
+#include <cassert>
 
 __device__
 void get_amat_0d(
@@ -105,6 +106,47 @@ __device__ void effective_coulomb::get_potential(
   potential_type &pot) const
 {
   symv(MAX_NSH, &cache.amat[0][0], wfn.qsh[1], pot.vsh[1], /*beta=*/1.0);
+}
+
+/*!> Evaluate selfconsistent energy of the interaction
+subroutine get_energy(self, mol, cache, wfn, energies)
+   !> Instance of the electrostatic container
+   class(coulomb_charge_type), intent(in) :: self
+   !> Molecular structure data
+   type(structure_type), intent(in) :: mol
+   !> Reusable data container
+   type(container_cache), intent(inout) :: cache
+   !> Wavefunction data
+   type(wavefunction_type), intent(in) :: wfn
+   !> Electrostatic energy
+   real(wp), intent(inout) :: energies(:)
+
+   integer :: iat, ii, ish
+   type(coulomb_cache), pointer :: ptr
+
+   call view(cache, ptr)
+
+   call symv(ptr%amat, wfn%qsh(:, 1), ptr%vvec, alpha=0.5_wp)
+   do iat = 1, mol%nat
+      ii = self%offset(iat)
+      do ish = 1, self%nshell(iat)
+         energies(iat) = energies(iat) + ptr%vvec(ii+ish) * wfn%qsh(ii+ish, 1)
+      end do
+   end do
+end subroutine get_energy
+*/
+__device__ void effective_coulomb::get_energy(const structure_type &mol, coulomb_cache &cache, const wavefunction_type &wfn, float (&energies)[MAX_NAT]) const
+{
+
+  float vvec[MAX_NSH] = {0.0f};
+  symv(MAX_NSH, &cache.amat[0][0], wfn.qsh[0], vvec, /*beta=*/0.5f);
+
+  for (int iat = 0; iat < mol.nat; iat++) {
+    int ii = offset[iat];
+    for (int ish = 0; ish < nshell[iat]; ish++) {
+      energies[iat] += vvec[ii + ish] * wfn.qsh[0][ii + ish];
+    }
+  }
 }
 
 __device__
@@ -590,6 +632,32 @@ void gemv(const float* A, const float* x, float* y,
   bool transpose = false) {...}
   */
 
+/*
+!> Get multipolar anisotropic exchange-correlation kernel
+subroutine get_kernel_energy(mol, kernel, mpat, energies)
+   !> Molecular structure data
+   type(structure_type), intent(in) :: mol
+   !> Multipole kernel
+   real(wp), intent(in) :: kernel(:)
+   !> Atomic multipole momemnt
+   real(wp), intent(in) :: mpat(:, :)
+   !> Electrostatic energy
+   real(wp), intent(inout) :: energies(:)
+
+   integer :: iat, izp
+   real(wp) :: mpt(size(mpat, 1)), mpscale(size(mpat, 1))
+
+   mpscale(:) = 1
+   if (size(mpat, 1) == 6) mpscale([2, 4, 5]) = 2
+
+   do iat = 1, mol%nat
+      izp = mol%id(iat)
+      mpt(:) = mpat(:, iat) * mpscale
+      energies(iat) = energies(iat) + kernel(izp) * dot_product(mpt, mpat(:, iat))
+   end do
+end subroutine get_kernel_energy
+*/
+
 
 __device__ 
 void damped_multipole::get_potential(const structure_type &mol, coulomb_cache &cache, const wavefunction_type &wfn, potential_type &pot) const
@@ -624,6 +692,102 @@ void damped_multipole::get_potential(const structure_type &mol, coulomb_cache &c
   get_kernel_potential(mol, qkernel, wfn.qpat[0], pot.vqp[0]);
 }
 
+/*
+
+!> Get anisotropic electrostatic energy
+subroutine get_energy(self, mol, cache, wfn, energies)
+   !> Instance of the multipole container
+   class(damped_multipole), intent(in) :: self
+   !> Molecular structure data
+   type(structure_type), intent(in) :: mol
+   !> Wavefunction data
+   type(wavefunction_type), intent(in) :: wfn
+   !> Electrostatic energy
+   real(wp), intent(inout) :: energies(:)
+   !> Reusable data container
+   type(container_cache), intent(inout) :: cache
+
+   real(wp), allocatable :: vs(:), vd(:, :), vq(:, :)
+   type(coulomb_cache), pointer :: ptr
+
+   call view(cache, ptr)
+
+   allocate(vs(mol%nat), vd(3, mol%nat), vq(6, mol%nat))
+
+   call gemv(ptr%amat_sd, wfn%qat(:, 1), vd)
+   call gemv(ptr%amat_dd, wfn%dpat(:, :, 1), vd, beta=1.0_wp, alpha=0.5_wp)
+   call gemv(ptr%amat_sq, wfn%qat(:, 1), vq)
+
+   energies(:) = energies + sum(wfn%dpat(:, :, 1) * vd, 1) + sum(wfn%qpat(:, :, 1) * vq, 1)
+
+   call get_kernel_energy(mol, self%dkernel, wfn%dpat(:, :, 1), energies)
+   call get_kernel_energy(mol, self%qkernel, wfn%qpat(:, :, 1), energies)
+end subroutine get_energy*/
+
+template <int D>
+__device__
+void get_kernel_energy(
+  const structure_type &mol,
+  const float (&kernel)[MAX_NELEM], 
+  const float (&mpat)[MAX_NAT][D], 
+  float (&energies)[MAX_NAT]
+)
+{
+  float mpscale[D];
+  for (int i = 0; i < D; i++) {
+    mpscale[i] = 1.0f;
+  }
+  if (D == 6) {
+    mpscale[1] = 2.0f;
+    mpscale[3] = 2.0f;
+    mpscale[4] = 2.0f;
+  }
+
+  for (int iat = 0; iat < mol.nat; iat++) {
+    int izp = mol.id[iat];
+    float dot_product = 0.0f;
+    for (int d = 0; d < D; d++) {
+      dot_product += mpat[iat][d] * mpat[iat][d] * mpscale[d];
+    }
+    energies[iat] += kernel[izp] * dot_product;
+  }
+}
+
+__device__ void damped_multipole::get_energy(const structure_type &mol, coulomb_cache &cache, const wavefunction_type &wfn, float (&energies)[MAX_NAT]) const
+{
+  float vs[MAX_NAT] {0};
+  float vd[MAX_NAT][3] {0};
+  float vq[MAX_NAT][6] {0};
+
+  // gemv312(&cache.amat_sd[0][0][0], &wfn.qat[0][0], &pot.vdp[0][0][0], mol.nat, mol.nat * 3, 1.0f, 1.0f, false);
+  // gemv321(&cache.amat_sd[0][0][0], &wfn.dpat[0][0][0], &pot.vat[0][0], mol.nat, mol.nat * 3, 1.0f, 1.0f, true);
+
+  // /*     vdp := amat_dd @ dpat    */
+  // /* 3 9 3 9 x 3 9 -> 3 9 */
+  // gemv422(&cache.amat_dd[0][0][0][0], &wfn.dpat[0][0][0], &pot.vdp[0][0][0], mol.nat, 3, mol.nat, 1.0f, 1.0f, false);
+
+  // // call gemv(ptr%amat_sq, wfn%qat(:, 1), pot%vqp(:, :, 1), beta=1.0_wp)
+  // // call gemv(ptr%amat_sq, wfn%qpat(:, :, 1), pot%vat(:, 1), beta=1.0_wp, trans="T")
+  // gemv312(&cache.amat_sq[0][0][0], &wfn.qat[0][0], &pot.vqp[0][0][0], mol.nat, mol.nat * 6, 1.0f, 1.0f, false);
+  // gemv321(&cache.amat_sq[0][0][0], &wfn.qpat[0][0][0], &pot.vat[0][0], mol.nat, mol.nat * 6, 1.0f, 1.0f, true);
+  // 9x9x3 @ 9 + 9x3
+  gemv312(&cache.amat_sd[0][0][0], &wfn.qat[0][0], &vd[0][0], mol.nat, mol.nat * 3, 1.0f, 0.0f, false);
+  // gemv422(&cache.amat_dd[0][0][0][0], &wfn.dpat[0][0][0], &vd[0][0], mol.nat, 3, mol.nat, 0.5f, 1.0f, false);
+  // gemv312(&cache.amat_sq[0][0][0], &wfn.qat[0][0], &vq[0][0], mol.nat, mol.nat * 6, 1.0f, 0.0f, false);
+
+  // for (int iat = 0; iat < mol.nat; iat++) {
+  //   for (int d = 0; d < 3; d++) {
+  //     energies[iat] += wfn.dpat[iat][d][0] * vd[iat][d];
+  //   }
+  //   for (int q = 0; q < 6; q++) {
+  //     energies[iat] += wfn.qpat[iat][q][0] * vq[iat][q];
+  //   }
+  // }
+
+  // get_kernel_energy(mol, dkernel, wfn.dpat[0], energies);
+  // get_kernel_energy(mol, qkernel, wfn.qpat[0], energies);
+}
+
 __device__ 
 void tb_coulomb::get_potential(
   const structure_type &mol, 
@@ -640,6 +804,16 @@ void tb_coulomb::get_potential(
   /*if (allocated(self%es3)) then
       call self%es3%get_potential(mol, cache, wfn, pot) // UNUSED
    end if*/
+}
+
+__device__ 
+void tb_coulomb::get_energy(const structure_type &mol, coulomb_cache &cache, const wavefunction_type &wfn, float (&energies)[MAX_NAT]) const
+{
+  es2.get_energy(mol, cache, wfn, energies);
+
+  aes2.get_energy(mol, cache, wfn, energies);
+
+  // es3.get_energy(mol, cache, wfn, energies);
 }
 
 __device__
@@ -685,4 +859,56 @@ void onsite_thirdorder::get_potential(
       pot.vat[0][iat] += wfn.qat[0][iat] * wfn.qat[0][iat] * hubbard_derivs[izp][0];
     }
   }
+}
+
+/*
+!> Evaluate selfconsistent energy of the interaction
+subroutine get_energy(self, mol, cache, wfn, energies)
+   !> Instance of the electrostatic container
+   class(onsite_thirdorder), intent(in) :: self
+   !> Molecular structure data
+   type(structure_type), intent(in) :: mol
+   !> Reusable data container
+   type(container_cache), intent(inout) :: cache
+   !> Wavefunction data
+   type(wavefunction_type), intent(in) :: wfn
+   !> Electrostatic energy
+   real(wp), intent(inout) :: energies(:)
+
+   integer :: iat, izp, ii, ish
+
+   if (self%shell_resolved) then
+      do iat = 1, mol%nat
+         izp = mol%id(iat)
+         ii = self%ish_at(iat)
+         do ish = 1, self%nsh_at(iat)
+            energies(iat) = energies(iat) &
+               & + wfn%qsh(ii+ish, 1)**3 * self%hubbard_derivs(ish, izp) / 3.0_wp
+         end do
+      end do
+   else
+      do iat = 1, mol%nat
+         izp = mol%id(iat)
+         energies(iat) = energies(iat) &
+            & + wfn%qat(iat, 1)**3 * self%hubbard_derivs(1, izp) / 3.0_wp
+      end do
+   end if
+end subroutine get_energy
+*/
+__device__ void onsite_thirdorder::get_energy(const structure_type &mol, coulomb_cache &cache, const wavefunction_type &wfn, float (&energies)[MAX_NAT]) const
+{
+  /*if (shell_resolved) {*/ assert(shell_resolved&&"We only support shell resolved in this function");
+  for (int iat = 0; iat < mol.nat; iat++) {
+    int izp = mol.id[iat];
+    int ii = ish_at[iat];
+    for (int ish = 0; ish < nsh_at[iat]; ish++) {
+      energies[iat] += powf(wfn.qsh[0][ii + ish], 3) * hubbard_derivs[izp][ish] / 3.0f;
+    }
+  }
+  /*} else {
+    for (int iat = 0; iat < mol.nat; iat++) {
+      int izp = mol.id[iat];
+      energies[iat] += powf(wfn.qat[0][iat], 3) * hubbard_derivs[izp][0] / 3.0f;
+    }
+  }*/
 }

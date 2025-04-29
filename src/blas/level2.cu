@@ -91,7 +91,7 @@ __device__ void gemv312(const float *A, const float *x, float *y,
 {
   size_t flattened_rows = dim1 * dim2;
   size_t cols = dim3;
-
+  // printf("gemv312 called with A(%i %i %i) @ x(%i) + y(%i %i)\n", dim1, dim2, dim3, )
   if (!transpose)
   {
     // Flatten the first two dimensions and call gemv
