@@ -20,9 +20,20 @@ void updown_to_magnet(
   float (&x)[MAX_NSPIN][MAX_NSH]
 );
 
+template <int Dim>
 __device__
 void updown_to_magnet(
-  float (&x)[MAX_NSPIN][MAX_NAT][3]
-);
+  float (&x)[MAX_NSPIN][MAX_NAT][Dim]
+)
+{
+  if (MAX_NSPIN == 2) { // since fortran indices are reverse of c-indices
+    for (int i = 0; i < MAX_NAT; ++i) {
+      for (int j = 0; j < Dim; ++j) {
+        x[0][i][j] = x[0][i][j] + x[1][i][j];
+        x[1][i][j] = x[0][i][j] - 2.0f * x[1][i][j];
+      }
+    }
+  }
+}
 
 #endif

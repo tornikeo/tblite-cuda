@@ -69,6 +69,8 @@ class broyden_mixer
   
   __device__ 
   void set(const float *qvec, int size);
+  __device__
+  void diff(const float *qsh, int size);
 } ;
 
 

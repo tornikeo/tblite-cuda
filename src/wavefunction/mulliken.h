@@ -43,12 +43,57 @@ void get_mulliken_shell_charges(
   float (&qsh)[MAX_NSPIN][MAX_NSH]
 );
 
-__device__
+// template <int Dim>
+// __device__
+// void get_mulliken_atomic_multipoles(
+//   const basis_type &bas,
+//   const float (&mpmat)[MAX_NAO][MAX_NAO][Dim],
+//   const float (&pmat)[MAX_NSPIN][MAX_NAO][MAX_NAO],
+//   float (&mpat)[MAX_NSPIN][MAX_NAT][Dim]
+// );
+
+// __device__
+// void get_mulliken_atomic_multipoles(
+//   const basis_type &bas,
+//   const float (&mpmat)[MAX_NAO][MAX_NAO][3],
+//   const float (&pmat)[MAX_NSPIN][MAX_NAO][MAX_NAO],
+//   float (&mpat)[MAX_NSPIN][MAX_NAT][3]
+// );
+
+template <int Dim> /* Template functions need to be in the header to be used*/
+__device__         /* in other files */
 void get_mulliken_atomic_multipoles(
   const basis_type &bas,
-  const float (&mpmat)[MAX_NAO][MAX_NAO][3],
+  const float (&mpmat)[MAX_NAO][MAX_NAO][Dim],
   const float (&pmat)[MAX_NSPIN][MAX_NAO][MAX_NAO],
-  float (&mpat)[MAX_NSPIN][MAX_NAT][3]
-);
+  float (&mpat)[MAX_NSPIN][MAX_NAT][Dim]
+)
+{
+  // Initialize mpat to zero
+  for (int spin = 0; spin < MAX_NSPIN; spin++) {
+    for (int iat = 0; iat < MAX_NAT; iat++) {
+      for (int dim = 0; dim < Dim; dim++) {
+        mpat[spin][iat][dim] = 0.0f;
+      }
+    }
+  }
+
+  // Compute Mulliken atomic multipoles
+  for (int spin = 0; spin < MAX_NSPIN; spin++) {
+    for (int iao = 0; iao < bas.nao; iao++) {
+      float pao[6] = {0.0};
+      for (int jao = 0; jao < bas.nao; jao++) {
+        for (int dim = 0; dim < Dim; dim++) {
+          pao[dim] += pmat[spin][jao][iao] * mpmat[dim][jao][iao];
+        }
+      }
+      for (int dim = 0; dim < Dim; dim++) {
+        mpat[spin][bas.ao2at[iao]][dim] -= pao[dim];
+      }
+    }
+  }
+
+  updown_to_magnet(mpat);
+}
 
 #endif

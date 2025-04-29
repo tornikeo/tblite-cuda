@@ -1,6 +1,8 @@
 #ifndef UTILS_ARRAY_H
 #define UTILS_ARRAY_H
 
+#define SIZEOF_ARRAY(arr) (sizeof(arr) / sizeof((arr)[0]))
+
 /* TODO: priority high These don't work yet, 
     due to 'not being defined' somehow 
   in general, templates within in other files don't seem to 

@@ -3,7 +3,10 @@
 
 enum resolution_type
 {
-  not_used, atom_resolved, shell_resolved, orbital_resolved
+  not_used, 
+  atom_resolved, 
+  shell_resolved, 
+  orbital_resolved
 };
 
 typedef struct

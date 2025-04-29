@@ -66,37 +66,37 @@ end subroutine get_mulliken_atomic_multipoles
 
 /* TODO: Go FROM HERE */
 /* TODO: You need to turn 3 into 6 and with templates? */
-__device__
-void get_mulliken_atomic_multipoles(
-  const basis_type &bas,
-  const float (&mpmat)[MAX_NAO][MAX_NAO][3],
-  const float (&pmat)[MAX_NSPIN][MAX_NAO][MAX_NAO],
-  float (&mpat)[MAX_NSPIN][MAX_NAT][3]
-)
-{
-  // Initialize mpat to zero
-  for (int spin = 0; spin < MAX_NSPIN; spin++) {
-    for (int iat = 0; iat < MAX_NAT; iat++) {
-      for (int dim = 0; dim < 3; dim++) {
-        mpat[spin][iat][dim] = 0.0f;
-      }
-    }
-  }
+// __device__
+// void get_mulliken_atomic_multipoles(
+//   const basis_type &bas,
+//   const float (&mpmat)[MAX_NAO][MAX_NAO][3],
+//   const float (&pmat)[MAX_NSPIN][MAX_NAO][MAX_NAO],
+//   float (&mpat)[MAX_NSPIN][MAX_NAT][3]
+// )
+// {
+//   // Initialize mpat to zero
+//   for (int spin = 0; spin < MAX_NSPIN; spin++) {
+//     for (int iat = 0; iat < MAX_NAT; iat++) {
+//       for (int dim = 0; dim < 3; dim++) {
+//         mpat[spin][iat][dim] = 0.0f;
+//       }
+//     }
+//   }
 
-  // Compute Mulliken atomic multipoles
-  for (int spin = 0; spin < MAX_NSPIN; spin++) {
-    for (int iao = 0; iao < bas.nao; iao++) {
-      float pao[3] = {0.0f, 0.0f, 0.0f};
-      for (int jao = 0; jao < bas.nao; jao++) {
-        for (int dim = 0; dim < 3; dim++) {
-          pao[dim] += pmat[spin][jao][iao] * mpmat[dim][jao][iao];
-        }
-      }
-      for (int dim = 0; dim < 3; dim++) {
-        mpat[spin][bas.ao2at[iao]][dim] -= pao[dim];
-      }
-    }
-  }
+//   // Compute Mulliken atomic multipoles
+//   for (int spin = 0; spin < MAX_NSPIN; spin++) {
+//     for (int iao = 0; iao < bas.nao; iao++) {
+//       float pao[3] = {0.0};
+//       for (int jao = 0; jao < bas.nao; jao++) {
+//         for (int dim = 0; dim < 3; dim++) {
+//           pao[dim] += pmat[spin][jao][iao] * mpmat[dim][jao][iao];
+//         }
+//       }
+//       for (int dim = 0; dim < 3; dim++) {
+//         mpat[spin][bas.ao2at[iao]][dim] -= pao[dim];
+//       }
+//     }
+//   }
 
-  updown_to_magnet(mpat);
-}
+//   updown_to_magnet(mpat);
+// }

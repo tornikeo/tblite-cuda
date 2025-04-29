@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <cassert>
 #include "iterators.h"
+#include "../utils/array.h"
 #include "../lapack/sygvd.h"
 #include "../wavefunction/fermi.h"
 #include "../wavefunction/mulliken.h"
@@ -142,6 +143,25 @@ void get_qat_from_qsh
   }
 }
 
+__device__
+void diff_mixer(
+  broyden_mixer &mixer,
+  const wavefunction_type &wfn,
+  const scf_info &info
+)
+{
+  switch (info.charge)
+  {
+  case atom_resolved:
+    assert(false&&"Unimplemented");
+    break;
+  case shell_resolved:
+    mixer.diff(&wfn.qsh[0][0], SIZEOF_ARRAY(wfn.qsh));
+  default:
+    break;
+  }
+}
+
 /*
 
 subroutine get_density(wfn, solver, ints, ts, error)
@@ -231,6 +251,8 @@ void get_density(
   }
 }
 
+
+
 __device__
 void next_scf(
   int &iscf,
@@ -300,4 +322,10 @@ void next_scf(
 
   // call get_mulliken_atomic_multipoles(bas, ints%quadrupole, wfn%density, &
   //     & wfn%qpat
+  get_mulliken_atomic_multipoles(bas, 
+    ints.quadrupole, 
+    wfn.density, 
+    wfn.qpat);
+
+  diff_mixer(mixer, wfn, info);
 }

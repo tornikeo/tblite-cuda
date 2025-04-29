@@ -60,3 +60,24 @@ void broyden_mixer::set(const float *qvec, int size)
   }
   iset += size;
 }
+/*
+
+subroutine diff_1d(self, qvec)
+   class(broyden_mixer), intent(inout) :: self
+   real(wp), intent(in) :: qvec(:)
+   self%dq(self%idif+1:self%idif+size(qvec)) = qvec &
+      & - self%q_in(self%idif+1:self%idif+size(qvec))
+   self%idif = self%idif + size(qvec)
+end subroutine diff_1d
+*/
+__device__
+void broyden_mixer::diff(
+  const float *qsh, int size
+)
+{
+  for (int i = idif; i < idif + size; i++)
+  {
+    dq[i] = qsh[i] - q_in[i];
+  }
+  idif += size;
+}
