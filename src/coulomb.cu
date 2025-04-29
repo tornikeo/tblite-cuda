@@ -675,19 +675,21 @@ void damped_multipole::get_potential(const structure_type &mol, coulomb_cache &c
    call get_kernel_potential(mol, self%qkernel, wfn%qpat(:, :, 1), pot%vqp(:, :, 1))
   */
 //  gemv312(&cache.amat_sd[0][0][0], &wfn.qat[0], &pot.vdp[0][0], )
-  gemv312(&cache.amat_sd[0][0][0], &wfn.qat[0][0], &pot.vdp[0][0][0], mol.nat, mol.nat * 3, 1.0f, 1.0f, false);
-  gemv321(&cache.amat_sd[0][0][0], &wfn.dpat[0][0][0], &pot.vat[0][0], mol.nat, mol.nat * 3, 1.0f, 1.0f, true);
+  /* TODO: Go from here */
+  /* TODO: Also, you need to do testing - remember the copy-over-plans */
+  /* You can copy over data from fortran via printing arrs in fortran */
+  gemv(cache.amat_sd, wfn.qat[0], pot.vdp[0],  1.0f, 1.0f, false);
+  gemv(cache.amat_sd, wfn.dpat[0], pot.vat[0], 1.0f, 1.0f, true);
 
   /*     vdp := amat_dd @ dpat    */
   /* 3 9 3 9 x 3 9 -> 3 9 */
-  gemv422(&cache.amat_dd[0][0][0][0], &wfn.dpat[0][0][0], &pot.vdp[0][0][0], mol.nat, 3, mol.nat, 1.0f, 1.0f, false);
+  gemv(cache.amat_dd, wfn.dpat[0][0][0], &pot.vdp[0][0][0], mol.nat, 3, mol.nat, 1.0f, 1.0f, false);
 
   // call gemv(ptr%amat_sq, wfn%qat(:, 1), pot%vqp(:, :, 1), beta=1.0_wp)
   // call gemv(ptr%amat_sq, wfn%qpat(:, :, 1), pot%vat(:, 1), beta=1.0_wp, trans="T")
-  gemv312(&cache.amat_sq[0][0][0], &wfn.qat[0][0], &pot.vqp[0][0][0], mol.nat, mol.nat * 6, 1.0f, 1.0f, false);
-  gemv321(&cache.amat_sq[0][0][0], &wfn.qpat[0][0][0], &pot.vat[0][0], mol.nat, mol.nat * 6, 1.0f, 1.0f, true);
+  gemv(cache.amat_sq, wfn.qat, pot.vqp[0][0][0], mol.nat, mol.nat * 6, 1.0f, 1.0f, false);
+  gemv(cache.amat_sq, wfn.qpat, pot.vat[0][0], mol.nat, mol.nat * 6, 1.0f, 1.0f, true);
   
-  /* TODO: GO FROM HERE */
   get_kernel_potential(mol, dkernel, wfn.dpat[0], pot.vdp[0]);
   get_kernel_potential(mol, qkernel, wfn.qpat[0], pot.vqp[0]);
 }
@@ -771,7 +773,7 @@ __device__ void damped_multipole::get_energy(const structure_type &mol, coulomb_
   // gemv312(&cache.amat_sq[0][0][0], &wfn.qat[0][0], &pot.vqp[0][0][0], mol.nat, mol.nat * 6, 1.0f, 1.0f, false);
   // gemv321(&cache.amat_sq[0][0][0], &wfn.qpat[0][0][0], &pot.vat[0][0], mol.nat, mol.nat * 6, 1.0f, 1.0f, true);
   // 9x9x3 @ 9 + 9x3
-  gemv312(&cache.amat_sd[0][0][0], &wfn.qat[0][0], &vd[0][0], mol.nat, mol.nat * 3, 1.0f, 0.0f, false);
+  gemv(&cache.amat_sd[0][0][0], &wfn.qat[0][0], &vd[0][0], mol.nat, mol.nat * 3, 1.0f, 0.0f, false);
   // gemv422(&cache.amat_dd[0][0][0][0], &wfn.dpat[0][0][0], &vd[0][0], mol.nat, 3, mol.nat, 0.5f, 1.0f, false);
   // gemv312(&cache.amat_sq[0][0][0], &wfn.qat[0][0], &vq[0][0], mol.nat, mol.nat * 6, 1.0f, 0.0f, false);
 
