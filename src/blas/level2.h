@@ -1,93 +1,102 @@
 #ifndef BLAS_LEVEL2_H
 #define BLAS_LEVEL2_H
-/* 
+/*
 This function does y := alpha*A*x + beta*y,
 */
-// template <int N>
-__device__ __host__ 
-void symv(
-  int N,
-  const float *amat, // 1D array representing symmetric matrix
-  const float (&xvec)[],//[N],
-  float (&yvec)[], //[N],
-  const float beta = 0.0f,
-  const float alpha = 1.0f
-);
 
-// matrix-vector multiplication
-template <int N, int M>
+/* 
+implement blas level 2 operations here
+
+we need:
+
+sgemv
+sgemv312
+sgemv321
+sgemv422
+*/
+
 __device__ __host__
-void gemv(
-  const float (&A)[N][M], const float (&x)[M], float (&y)[N], 
-  float alpha = 1.0f, 
-  float beta = 0.0f, 
-  bool transpose = false
+void sgemv(
+  bool trans, int m, int n, float alpha, const float* amat, int lda,
+  const float* xvec, int incx, float beta, float* yvec, int incy
 )
 {
-  for (int i = 0; i < N; ++i) {
-    float temp = 0.0f;
-    for (int j = 0; j < M; ++j) {
-      temp += transpose ? A[j][i] * x[j] : A[i][j] * x[j];
-    }
-    y[i] = alpha * temp + beta * y[i];
-  }
-}
-
-/*
-
-*/
-template <int N, int K, int M>
-__device__  __host__
-void gemv( /* gemv321 */
-  const float (&A)[N][K][M], const float (&x)[K][M], float (&y)[N], 
-  float alpha = 1.0f, 
-  float beta = 0.0f, 
-  bool transpose = false)
-{
-  for (int i = 0; i < N; ++i) {
-    float temp = 0.0f;
-    for (int j = 0; j < K; ++j) {
-      for (int k = 0; k < M; ++k) {
-        int idx = j * M + k; // Flatten [K][M] into [K * M]
-        temp += transpose ? A[j][k][i] * x[j][k] : A[i][j][k] * x[j][k];
+  if (!trans) {
+      // y := alpha * A * x + beta * y
+      for (int i = 0; i < m; ++i) {
+          float temp = 0.0f;
+          for (int j = 0; j < n; ++j) {
+              temp += amat[i * lda + j] * xvec[j * incx];
+          }
+          yvec[i * incy] = alpha * temp + beta * yvec[i * incy];
       }
-    }
-    y[i] = alpha * temp + beta * y[i];
-  }
-}
-
-/*
-Perform matrix-vector multiplication, with the following shapes
-
-A(M, N, M, N) @ x(M, N) + y(M, N)
-Where interpret the shapes like so:
-
-A(M*N, M*N) @ x(M*N) + y(M*N)
-*/
-template <int N, int M>
-__device__ __host__
-void gemv(
-  const float (&A)[M][N][M][N], const float (&x)[M][N], float (&y)[M][N], 
-  float alpha = 1.0f, 
-  float beta = 0.0f, 
-  bool transpose = false)
-{
-  for (int i = 0; i < M; ++i) {
-    for (int j = 0; j < N; ++j) {
-      float temp = 0.0f;
-      for (int k = 0; k < M; ++k) {
-        for (int l = 0; l < N; ++l) {
-          int idx1 = k * N + l; // Flatten [M][N] into [M * N]
-          int idx2 = j * M + i; // Transpose after flattening
-          temp += transpose ? A[k][l][j][i] * x[k][l] : A[i][j][k][l] * x[k][l];
-        }
+  } else {
+      // y := alpha * A^T * x + beta * y
+      for (int i = 0; i < n; ++i) {
+          float temp = 0.0f;
+          for (int j = 0; j < m; ++j) {
+              temp += amat[j * lda + i] * xvec[j * incx];
+          }
+          yvec[i * incy] = alpha * temp + beta * yvec[i * incy];
       }
-      y[i][j] = alpha * temp + beta * y[i][j];
-    }
   }
 }
 
 
+void test_sgemv() {
+  // Test case 1: Non-transposed matrix multiplication
+  {
+    const int m = 2, n = 3;
+    float amat[m * n] = {1, 2, 3, 4, 5, 6};
+    float xvec[n] = {1, 1, 1};
+    float yvec[m] = {0, 0};
+    float alpha = 1.0f, beta = 0.0f;
+    int lda = n, incx = 1, incy = 1;
 
-void test_blas();
+    sgemv(false, m, n, alpha, amat, lda, xvec, incx, beta, yvec, incy);
+
+    assert(yvec[0] == 6.0f); // 1*1 + 2*1 + 3*1
+    assert(yvec[1] == 15.0f); // 4*1 + 5*1 + 6*1
+  }
+
+  // Test case 2: Transposed matrix multiplication
+  {
+    const int m = 2, n = 3;
+    float amat[m * n] = {1, 2, 3, 4, 5, 6};
+    float xvec[m] = {1, 1};
+    float yvec[n] = {0, 0, 0};
+    float alpha = 1.0f, beta = 0.0f;
+    int lda = n, incx = 1, incy = 1;
+
+    sgemv(true, m, n, alpha, amat, lda, xvec, incx, beta, yvec, incy);
+
+    assert(yvec[0] == 5.0f); // 1*1 + 4*1
+    assert(yvec[1] == 7.0f); // 2*1 + 5*1
+    assert(yvec[2] == 9.0f); // 3*1 + 6*1
+  }
+
+  // Test case 3: Non-transposed with beta scaling
+  {
+    const int m = 2, n = 3;
+    float amat[m * n] = {1, 2, 3, 4, 5, 6};
+    float xvec[n] = {1, 1, 1};
+    float yvec[m] = {1, 1};
+    float alpha = 1.0f, beta = 2.0f;
+    int lda = n, incx = 1, incy = 1;
+
+    sgemv(false, m, n, alpha, amat, lda, xvec, incx, beta, yvec, incy);
+
+    assert(yvec[0] == 8.0f); // (1*1 + 2*1 + 3*1) + 2*1
+    assert(yvec[1] == 17.0f); // (4*1 + 5*1 + 6*1) + 2*1
+  }
+
+  std::cout << "All tests passed for sgemv!" << std::endl;
+}
+
+
+void test_blas_level2()
+{
+  test_sgemv();
+}
+
 #endif

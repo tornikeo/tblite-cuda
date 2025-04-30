@@ -17,7 +17,7 @@ void test_blas() {
     float y[N] = {0.0f, 0.0f};
     float expected_y[N] = {14.0f, 32.0f}; // Computed manually: A*x
 
-    gemv<N, M>(A, x, y);
+    gemv(A, x, y);
 
     for (int i = 0; i < N; ++i) {
       assert(fabs(y[i] - expected_y[i]) < 1e-5);
@@ -33,7 +33,7 @@ void test_blas() {
     float y[N] = {0.0f, 0.0f};
     float expected_y[N] = {50.0f, 114.0f}; // Computed manually: A*x
 
-    gemv<N, K, M>(A, x, y);
+    gemv(A, x, y);
 
     for (int i = 0; i < N; ++i) {
       assert(fabs(y[i] - expected_y[i]) < 1e-5);
@@ -52,7 +52,7 @@ void test_blas() {
     float y[M][N] = {{0.0f, 0.0f}, {0.0f, 0.0f}};
     float expected_y[M][N] = {{250.0f, 260.0f}, {618.0f, 644.0f}}; // Computed manually: A*x
 
-    gemv<M, N>(A, x, y);
+    gemv(A, x, y);
 
     for (int i = 0; i < M; ++i) {
       for (int j = 0; j < N; ++j) {

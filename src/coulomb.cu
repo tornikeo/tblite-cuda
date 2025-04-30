@@ -683,12 +683,12 @@ void damped_multipole::get_potential(const structure_type &mol, coulomb_cache &c
 
   /*     vdp := amat_dd @ dpat    */
   /* 3 9 3 9 x 3 9 -> 3 9 */
-  gemv(cache.amat_dd, wfn.dpat[0][0][0], &pot.vdp[0][0][0], mol.nat, 3, mol.nat, 1.0f, 1.0f, false);
+  gemv(cache.amat_dd, wfn.dpat[0], pot.vdp[0], 1.0f, 1.0f, false);
 
   // call gemv(ptr%amat_sq, wfn%qat(:, 1), pot%vqp(:, :, 1), beta=1.0_wp)
   // call gemv(ptr%amat_sq, wfn%qpat(:, :, 1), pot%vat(:, 1), beta=1.0_wp, trans="T")
-  gemv(cache.amat_sq, wfn.qat, pot.vqp[0][0][0], mol.nat, mol.nat * 6, 1.0f, 1.0f, false);
-  gemv(cache.amat_sq, wfn.qpat, pot.vat[0][0], mol.nat, mol.nat * 6, 1.0f, 1.0f, true);
+  gemv(cache.amat_sq, wfn.qat[0],  pot.vqp[0], 1.0f, 1.0f, false);
+  gemv(cache.amat_sq, wfn.qpat[0], pot.vat[0], 1.0f, 1.0f, true);
   
   get_kernel_potential(mol, dkernel, wfn.dpat[0], pot.vdp[0]);
   get_kernel_potential(mol, qkernel, wfn.qpat[0], pot.vqp[0]);
@@ -760,7 +760,35 @@ __device__ void damped_multipole::get_energy(const structure_type &mol, coulomb_
   float vs[MAX_NAT] {0};
   float vd[MAX_NAT][3] {0};
   float vq[MAX_NAT][6] {0};
+  /*
+  
+   allocate(vs(mol%nat), vd(3, mol%nat), vq(6, mol%nat))
+   !          9 9 3 x 9 + 9 3
+   !          3 9 9
+   call gemv(ptr%amat_sd, wfn%qat(:, 1), vd)
+   call gemv(ptr%amat_dd, wfn%dpat(:, :, 1), vd, alpha=0.5_wp, beta=1.0_wp, )
+   call gemv(ptr%amat_sq, wfn%qat(:, 1), vq)
 
+   energies(:) = energies + sum(wfn%dpat(:, :, 1) * vd, 1) + sum(wfn%qpat(:, :, 1) * vq, 1)
+
+   call get_kernel_energy(mol, self%dkernel, wfn%dpat(:, :, 1), energies)
+   call get_kernel_energy(mol, self%qkernel, wfn%qpat(:, :, 1), energies)
+  */
+  gemv(cache.amat_sd, wfn.qat[0], vd, 1.0f, 0.0f, true);
+  gemv(cache.amat_dd, wfn.dpat[0], vd, 0.5, 1.0, false);
+  gemv(cache.amat_sq, wfn.qat[0], vq, 1.0, 0.0, true);
+  
+  for (int iat = 0; iat < mol.nat; iat++) {
+    for (int d = 0; d < 3; d++) {
+      energies[iat] += wfn.dpat[iat][d][0] * vd[iat][d];
+    }
+    for (int q = 0; q < 6; q++) {
+      energies[iat] += wfn.qpat[iat][q][0] * vq[iat][q];
+    }
+  }
+
+  get_kernel_energy(mol, dkernel, wfn.dpat[0], energies);
+  get_kernel_energy(mol, qkernel, wfn.qpat[0], energies);
   // gemv312(&cache.amat_sd[0][0][0], &wfn.qat[0][0], &pot.vdp[0][0][0], mol.nat, mol.nat * 3, 1.0f, 1.0f, false);
   // gemv321(&cache.amat_sd[0][0][0], &wfn.dpat[0][0][0], &pot.vat[0][0], mol.nat, mol.nat * 3, 1.0f, 1.0f, true);
 
@@ -773,21 +801,9 @@ __device__ void damped_multipole::get_energy(const structure_type &mol, coulomb_
   // gemv312(&cache.amat_sq[0][0][0], &wfn.qat[0][0], &pot.vqp[0][0][0], mol.nat, mol.nat * 6, 1.0f, 1.0f, false);
   // gemv321(&cache.amat_sq[0][0][0], &wfn.qpat[0][0][0], &pot.vat[0][0], mol.nat, mol.nat * 6, 1.0f, 1.0f, true);
   // 9x9x3 @ 9 + 9x3
-  gemv(&cache.amat_sd[0][0][0], &wfn.qat[0][0], &vd[0][0], mol.nat, mol.nat * 3, 1.0f, 0.0f, false);
   // gemv422(&cache.amat_dd[0][0][0][0], &wfn.dpat[0][0][0], &vd[0][0], mol.nat, 3, mol.nat, 0.5f, 1.0f, false);
   // gemv312(&cache.amat_sq[0][0][0], &wfn.qat[0][0], &vq[0][0], mol.nat, mol.nat * 6, 1.0f, 0.0f, false);
 
-  // for (int iat = 0; iat < mol.nat; iat++) {
-  //   for (int d = 0; d < 3; d++) {
-  //     energies[iat] += wfn.dpat[iat][d][0] * vd[iat][d];
-  //   }
-  //   for (int q = 0; q < 6; q++) {
-  //     energies[iat] += wfn.qpat[iat][q][0] * vq[iat][q];
-  //   }
-  // }
-
-  // get_kernel_energy(mol, dkernel, wfn.dpat[0], energies);
-  // get_kernel_energy(mol, qkernel, wfn.qpat[0], energies);
 }
 
 __device__ 

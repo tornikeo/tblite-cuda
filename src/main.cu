@@ -37,7 +37,7 @@ int main()
     // cudaDeviceSynchronize();
     // printf("Hello, world!\n");
     
-    test_blas();
+    test_blas_level2();
     // test_sygvd();
     // test_xtb();
 
