@@ -1,25 +1,28 @@
 #ifndef BLAS_LEVEL2_H
 #define BLAS_LEVEL2_H
 /* 
-This function does y := alpha*A*x + beta*y,
+This function does y := alpha*avec*xvec + beta*yvec
 */
-// template <int N>
-__device__ void symv(
-  int N,
-  const float *amat, // 1D array representing symmetric matrix
-  const float (&xvec)[],//[N],
-  float (&yvec)[], //[N],
-  const float beta = 0.0f,
-  const float alpha = 1.0f
+
+__device__
+void symv(
+  const float (&amat)[MAX_NSH][MAX_NSH],
+  const float (&xvec)[MAX_NSH],
+  float (&yvec)[MAX_NSH],
+  const float alpha,
+  const float beta
 );
 
 // matrix-vector multiplication
-__device__ 
-void gemv(const float* A, const float* x, float* y, 
-  size_t rows, size_t cols, 
-  float alpha = 1.0f, 
-  float beta = 0.0f, 
-  bool transpose = false);
+__device__  __host__
+void gemv( 
+  const float (&amat)[MAX_NAO][MAX_NAT],
+  const float (&xvec)[MAX_NAT],
+  float (&yvec)[MAX_NAO],
+  const float alpha,
+  const float beta,
+  const bool trans
+);
 
 // matrix-vector multiplication, 3D @ 1D + 2D. e.g:
 // y(3,9) := A(3,9,9) @ x(9) + y(3,9)

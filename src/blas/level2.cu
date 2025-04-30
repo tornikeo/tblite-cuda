@@ -2,85 +2,87 @@
 #include "../utils/gpu.h"
 #include <stdio.h>
 #include <cassert>
+#include <cmath>
 
-/* TODO: priority low Consider this. Should this be a templated function */
-__device__ void symv(
-    int N,
-    const float *amat,     // 1D array representing symmetric matrix
-    const float (&xvec)[], //[N],
-    float (&yvec)[],       //[N],
-    const float beta = 0.0f,
-    const float alpha = 1.0f)
+
+__device__ __host__
+void symv(
+  const float (&amat)[MAX_NSH][MAX_NSH],
+  const float (&xvec)[MAX_NSH],
+  float (&yvec)[MAX_NSH],
+  const float alpha,
+  const float beta
+)
 {
-  for (int i = 0; i < N; i++)
+  for (int i = 0; i < MAX_NSH; i++)
   {
     float temp = 0.0f;
-    for (int j = 0; j < N; j++)
+    for (int j = 0; j < MAX_NSH; j++)
     {
-      temp += amat[i * N + j] * xvec[j]; // Map 1D array to 2D matrix
+      temp += amat[i][j] * xvec[j];
     }
     yvec[i] = alpha * temp + beta * yvec[i];
   }
 }
 
-__device__ void gemv(const float *A, const float *x, float *y,
-                     size_t rows, size_t cols,
-                     float alpha = 1.0f,
-                     float beta = 0.0f,
-                     bool transpose = false)
+__device__ __host__
+void gemv( 
+  const float (&amat)[MAX_NAO][MAX_NAT],
+  const float (&xvec)[MAX_NAT],
+  float (&yvec)[MAX_NAO],
+  const float alpha,
+  const float beta,
+  const bool trans
+)
 {
-  size_t row, col;
-  float result;
-
-  if (!transpose)
+  if (!trans)
   {
-    // y := alpha * A * x + beta * y
-    for (row = 0; row < rows; ++row)
+    for (int i = 0; i < MAX_NAO; i++)
     {
-      result = 0.0f;
-      for (col = 0; col < cols; ++col)
+      float temp = 0.0f;
+      for (int j = 0; j < MAX_NAT; j++)
       {
-        result += A[row * cols + col] * x[col];
+        temp += amat[i][j] * xvec[j];
       }
-      y[row] = alpha * result + beta * y[row];
+      yvec[i] = alpha * temp + beta * yvec[i];
     }
   }
   else
   {
-    // y := alpha * A^T * x + beta * y
-    for (col = 0; col < cols; ++col)
+    for (int i = 0; i < MAX_NAT; i++)
     {
-      result = 0.0f;
-      for (row = 0; row < rows; ++row)
+      float temp = 0.0f;
+      for (int j = 0; j < MAX_NAO; j++)
       {
-        result += A[row * cols + col] * x[row];
+        temp += amat[j][i] * xvec[j];
       }
-      y[col] = alpha * result + beta * y[col];
+      yvec[i] = alpha * temp + beta * yvec[i];
     }
   }
 }
 
 __global__ void test_gemv()
 {
-  // Define a small matrix A (2x3), vector x (3), and vector y (2)
-  const int rows = 2, cols = 3;
-  float A[rows * cols] = {1.0f, 2.0f, 3.0f,
-                          4.0f, 5.0f, 6.0f};
-  float x[cols] = {1.0f, 1.0f, 1.0f};
-  float y[rows] = {0.0f, 0.0f};
+  const float amat[MAX_NAO][MAX_NAT] = {1,2,3};
+  const float xvec[MAX_NAT] = {1.0f, 2.0f, 3.0f};
+  float yvec[MAX_NAO] = {0.0f, 0.0f, 0.0f};
+  const float alpha = 2.0f;
+  const float beta = 1.0f;
+  const bool trans = false;
 
-  // Call the __device__ gemv function directly
-  gemv(A, x, y, rows, cols);
+  gemv(amat, xvec, yvec, alpha, beta, trans);
 
   // Print the result
-  printf("Result y: [%f, %f]\n", y[0], y[1]);
+  printf("Result yvec: [%f, %f, %f]\n", yvec[0], yvec[1], yvec[2]);
 
   // Expected results
-  float expected_y[rows] = {6.0f, 15.0f};
+  float expected_yvec[MAX_NAO] = {8.0f, 17.0f, 26.0f};
 
   // Assert the results
-  assert(fabs(y[0] - expected_y[0]) < 1e-5 && "Assertion failed for y[0]");
-  assert(fabs(y[1] - expected_y[1]) < 1e-5 && "Assertion failed for y[1]");
+  for (int i = 0; i < MAX_NAO; ++i)
+  {
+    assert(fabs(yvec[i] - expected_yvec[i]) < 1e-5 && "Assertion failed for yvec[i]");
+  }
 }
 
 // BLAS-style matrix-vector multiplication with a 3D matrix (first two dimensions flattened)
@@ -89,19 +91,20 @@ __device__ void gemv312(const float *A, const float *x, float *y,
                         float alpha = 1.0f, float beta = 0.0f,
                         bool transpose = false)
 {
-  size_t flattened_rows = dim1 * dim2;
-  size_t cols = dim3;
-  // printf("gemv312 called with A(%i %i %i) @ x(%i) + y(%i %i)\n", dim1, dim2, dim3, )
-  if (!transpose)
-  {
-    // Flatten the first two dimensions and call gemv
-    gemv(A, x, y, flattened_rows, cols, alpha, beta, false);
-  }
-  else
-  {
-    // Transpose case: treat A as if it were transposed
-    gemv(A, x, y, cols, flattened_rows, alpha, beta, true);
-  }
+  
+  // size_t flattened_rows = dim1 * dim2;
+  // size_t cols = dim3;
+  // // printf("gemv312 called with A(%i %i %i) @ x(%i) + y(%i %i)\n", dim1, dim2, dim3, )
+  // if (!transpose)
+  // {
+  //   // Flatten the first two dimensions and call gemv
+  //   gemv(A, x, y, flattened_rows, cols, alpha, beta, false);
+  // }
+  // else
+  // {
+  //   // Transpose case: treat A as if it were transposed
+  //   gemv(A, x, y, cols, flattened_rows, alpha, beta, true);
+  // }
 }
 
 __global__ void test_gemv312()
@@ -163,19 +166,19 @@ __device__ void gemv321(const float *A, const float *x, float *y,
   float alpha = 1.0f, float beta = 0.0f,
   bool transpose = false)
 {
-  size_t rows = dim1;
-  size_t flattened_cols = dim2 * dim3;
-
-  if (!transpose)
-  {
-    // Flatten the last two dimensions and call gemv
-    gemv(A, x, y, rows, flattened_cols, alpha, beta, false);
-  }
-  else
-  {
-    // Transpose case: treat A as if it were transposed
-    gemv(A, x, y, flattened_cols, rows, alpha, beta, true);
-  }
+  //size_t rows = dim1;
+  //size_t flattened_cols = dim2 * dim3;
+//
+  //if (!transpose)
+  //{
+  //  // Flatten the last two dimensions and call gemv
+  //  gemv(A, x, y, rows, flattened_cols, alpha, beta, false);
+  //}
+  //else
+  //{
+  //  // Transpose case: treat A as if it were transposed
+  //  gemv(A, x, y, flattened_cols, rows, alpha, beta, true);
+  //}
 }
 
 /*
@@ -205,19 +208,19 @@ __device__ void gemv422(const float *A, const float *x, float *y,
                         float alpha = 1.0f, float beta = 0.0f,
                         bool transpose = false)
 {
-  size_t flattened_rows = dim1 * dim2;
-  size_t flattened_cols = dim3 * dim4;
+  // size_t flattened_rows = dim1 * dim2;
+  // size_t flattened_cols = dim3 * dim4;
 
-  if (!transpose)
-  {
-    // Flatten the first two dimensions and the last two dimensions, then call gemv
-    gemv(A, x, y, flattened_rows, flattened_cols, alpha, beta, false);
-  }
-  else
-  {
-    // Transpose case: treat A as if it were transposed
-    gemv(A, x, y, flattened_cols, flattened_rows, alpha, beta, true);
-  }
+  // if (!transpose)
+  // {
+  //   // Flatten the first two dimensions and the last two dimensions, then call gemv
+  //   gemv(A, x, y, flattened_rows, flattened_cols, alpha, beta, false);
+  // }
+  // else
+  // {
+  //   // Transpose case: treat A as if it were transposed
+  //   gemv(A, x, y, flattened_cols, flattened_rows, alpha, beta, true);
+  // }
 }
 
 __global__ void test_gemv422()
