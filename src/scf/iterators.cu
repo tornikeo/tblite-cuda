@@ -357,7 +357,7 @@ void next_scf(
     call interactions%get_potential(mol, icache, wfn, pot) // Not relevant for EIMS
   end if*/
 
-  add_pot_to_h1(bas, ints, pot, wfn.coeff);
+  add_pot_to_h1(bas, ints, pot, wfn.coeff); 
 
   set_mixer(mixer, wfn, info);
 

@@ -62,6 +62,73 @@ void arange(
   }  
 }
 
+template <int A, int B, int C, int D>
+__device__ __host__ inline 
+void arange(
+  float (&arr)[A][B][C][D]
+)
+{
+  int state = 0;
+  for (size_t i = 0; i < A; i++)
+  {
+    for (size_t j = 0; j < B; j++)
+    {
+      for (size_t k = 0; k < C; k++)
+      {
+        for (size_t l = 0; l < D; l++)
+        {
+          arr[i][j][k][l] = state;
+          state++;
+        }
+      }
+    }
+  }  
+}
+
+template <typename T, int A>
+__device__ __host__ inline
+void fill(T (&arr)[A], T value) {
+  for (int i = 0; i < A; i++) {
+    arr[i] = value;
+  }
+}
+
+template <typename T, int A, int B>
+__device__ __host__ inline
+void fill(T (&arr)[A][B], T value) {
+  for (int i = 0; i < A; i++) {
+    for (int j = 0; j < B; j++) {
+      arr[i][j] = value;
+    }
+  }
+}
+
+template <typename T, int A, int B, int C>
+__device__ __host__ inline
+void fill(T (&arr)[A][B][C], T value) {
+  for (int i = 0; i < A; i++) {
+    for (int j = 0; j < B; j++) {
+      for (int k = 0; k < C; k++) {
+        arr[i][j][k] = value;
+      }
+    }
+  }
+}
+
+template <typename T, int A, int B, int C, int D>
+__device__ __host__ inline
+void fill(T (&arr)[A][B][C][D], T value) {
+  for (int i = 0; i < A; i++) {
+    for (int j = 0; j < B; j++) {
+      for (int k = 0; k < C; k++) {
+        for (int l = 0; l < D; l++) {
+          arr[i][j][k][l] = value;
+        }
+      }
+    }
+  }
+}
+
 template <typename T, int A, int B>
 __device__ __host__ inline 
 void printr(const T (&arr)[A][B], const char *fmt = "%.2f")

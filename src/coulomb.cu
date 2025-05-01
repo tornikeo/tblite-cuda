@@ -105,7 +105,7 @@ __device__ void effective_coulomb::get_potential(
   const wavefunction_type &wfn, 
   potential_type &pot) const
 {
-  symv(MAX_NSH, &cache.amat[0][0], wfn.qsh[1], pot.vsh[1], /*beta=*/1.0);
+  symv(cache.amat, wfn.qsh[1], pot.vsh[1], 1, 1);
 }
 
 /*!> Evaluate selfconsistent energy of the interaction
@@ -139,7 +139,7 @@ __device__ void effective_coulomb::get_energy(const structure_type &mol, coulomb
 {
 
   float vvec[MAX_NSH] = {0.0f};
-  symv(MAX_NSH, &cache.amat[0][0], wfn.qsh[0], vvec, /*beta=*/0.5f);
+  symv(cache.amat, wfn.qsh[0], vvec, 1, 0.5f);
 
   for (int iat = 0; iat < mol.nat; iat++) {
     int ii = offset[iat];
@@ -659,6 +659,7 @@ end subroutine get_kernel_energy
 */
 
 
+
 __device__ 
 void damped_multipole::get_potential(const structure_type &mol, coulomb_cache &cache, const wavefunction_type &wfn, potential_type &pot) const
 {
@@ -675,22 +676,22 @@ void damped_multipole::get_potential(const structure_type &mol, coulomb_cache &c
    call get_kernel_potential(mol, self%qkernel, wfn%qpat(:, :, 1), pot%vqp(:, :, 1))
   */
 //  gemv312(&cache.amat_sd[0][0][0], &wfn.qat[0], &pot.vdp[0][0], )
-  gemv312(&cache.amat_sd[0][0][0], &wfn.qat[0][0], &pot.vdp[0][0][0], mol.nat, mol.nat * 3, 1.0f, 1.0f, false);
-  gemv321(&cache.amat_sd[0][0][0], &wfn.dpat[0][0][0], &pot.vat[0][0], mol.nat, mol.nat * 3, 1.0f, 1.0f, true);
 
-  /*     vdp := amat_dd @ dpat    */
-  /* 3 9 3 9 x 3 9 -> 3 9 */
-  gemv422(&cache.amat_dd[0][0][0][0], &wfn.dpat[0][0][0], &pot.vdp[0][0][0], mol.nat, 3, mol.nat, 1.0f, 1.0f, false);
+  gemv312(cache.amat_sd, wfn.qat[0], pot.vdp[0], 1.0f, 1.0f, true);
+  gemv321(cache.amat_sd, wfn.dpat[0], pot.vat[0], 1.0f, 1.0f, false);
+
+  gemv422(cache.amat_dd, wfn.dpat[0], pot.vdp[0], 1.0f, 1.0f, true);
 
   // call gemv(ptr%amat_sq, wfn%qat(:, 1), pot%vqp(:, :, 1), beta=1.0_wp)
   // call gemv(ptr%amat_sq, wfn%qpat(:, :, 1), pot%vat(:, 1), beta=1.0_wp, trans="T")
-  gemv312(&cache.amat_sq[0][0][0], &wfn.qat[0][0], &pot.vqp[0][0][0], mol.nat, mol.nat * 6, 1.0f, 1.0f, false);
-  gemv321(&cache.amat_sq[0][0][0], &wfn.qpat[0][0][0], &pot.vat[0][0], mol.nat, mol.nat * 6, 1.0f, 1.0f, true);
+  gemv312(cache.amat_sq, wfn.qat[0], pot.vqp[0], 1.0f, 1.0f, true);
+  gemv321(cache.amat_sq, wfn.qpat[0], pot.vat[0], 1.0f, 1.0f, false);
   
   /* TODO: GO FROM HERE */
   get_kernel_potential(mol, dkernel, wfn.dpat[0], pot.vdp[0]);
   get_kernel_potential(mol, qkernel, wfn.qpat[0], pot.vqp[0]);
 }
+
 
 /*
 
@@ -753,6 +754,7 @@ void get_kernel_energy(
   }
 }
 
+/* FIXME: BROKEN */
 __device__ void damped_multipole::get_energy(const structure_type &mol, coulomb_cache &cache, const wavefunction_type &wfn, float (&energies)[MAX_NAT]) const
 {
   float vs[MAX_NAT] {0};
@@ -771,21 +773,22 @@ __device__ void damped_multipole::get_energy(const structure_type &mol, coulomb_
   // gemv312(&cache.amat_sq[0][0][0], &wfn.qat[0][0], &pot.vqp[0][0][0], mol.nat, mol.nat * 6, 1.0f, 1.0f, false);
   // gemv321(&cache.amat_sq[0][0][0], &wfn.qpat[0][0][0], &pot.vat[0][0], mol.nat, mol.nat * 6, 1.0f, 1.0f, true);
   // 9x9x3 @ 9 + 9x3
-  gemv312(&cache.amat_sd[0][0][0], &wfn.qat[0][0], &vd[0][0], mol.nat, mol.nat * 3, 1.0f, 0.0f, false);
-  // gemv422(&cache.amat_dd[0][0][0][0], &wfn.dpat[0][0][0], &vd[0][0], mol.nat, 3, mol.nat, 0.5f, 1.0f, false);
-  // gemv312(&cache.amat_sq[0][0][0], &wfn.qat[0][0], &vq[0][0], mol.nat, mol.nat * 6, 1.0f, 0.0f, false);
 
-  // for (int iat = 0; iat < mol.nat; iat++) {
-  //   for (int d = 0; d < 3; d++) {
-  //     energies[iat] += wfn.dpat[iat][d][0] * vd[iat][d];
-  //   }
-  //   for (int q = 0; q < 6; q++) {
-  //     energies[iat] += wfn.qpat[iat][q][0] * vq[iat][q];
-  //   }
-  // }
+  gemv312(cache.amat_sd, wfn.qat[0],  vd, 1.0f, 0.0f, true);
+  gemv422(cache.amat_dd, wfn.dpat[0], vd, 0.5f, 1.0f, false);
+  gemv312(cache.amat_sq, wfn.qat[0],  vq, 1.0f, 0.0f, true);
 
-  // get_kernel_energy(mol, dkernel, wfn.dpat[0], energies);
-  // get_kernel_energy(mol, qkernel, wfn.qpat[0], energies);
+  for (int iat = 0; iat < mol.nat; iat++) {
+    for (int d = 0; d < 3; d++) {
+      energies[iat] += wfn.dpat[0][iat][d] * vd[iat][d];
+    }
+    for (int q = 0; q < 6; q++) {
+      energies[iat] += wfn.qpat[0][iat][q] * vq[iat][q];
+    }
+  }
+
+  get_kernel_energy(mol, dkernel, wfn.dpat[0], energies);
+  get_kernel_energy(mol, qkernel, wfn.qpat[0], energies);
 }
 
 __device__ 
@@ -798,9 +801,10 @@ void tb_coulomb::get_potential(
 {
   es2.get_potential(mol, cache, wfn, pot);
 
-  aes2.get_potential(mol, cache, wfn, pot);
+  /* TODO: Priority high finish these */
+  // aes2.get_potential(mol, cache, wfn, pot);
 
-  es3.get_potential(mol, cache, wfn, pot);
+  // es3.get_potential(mol, cache, wfn, pot);
   /*if (allocated(self%es3)) then
       call self%es3%get_potential(mol, cache, wfn, pot) // UNUSED
    end if*/
@@ -811,6 +815,7 @@ void tb_coulomb::get_energy(const structure_type &mol, coulomb_cache &cache, con
 {
   es2.get_energy(mol, cache, wfn, energies);
 
+  /* TODO: Priority high finish these */
   aes2.get_energy(mol, cache, wfn, energies);
 
   // es3.get_energy(mol, cache, wfn, energies);
