@@ -3,6 +3,7 @@
 
 #define SIZEOF_ARRAY(arr) (sizeof(arr) / sizeof((arr)[0]))
 #include <stdio.h>
+#include <cassert>
 
 /* TODO: priority high These don't work yet, 
     due to 'not being defined' somehow 
@@ -63,13 +64,13 @@ void arange(
 
 template <typename T, int A, int B>
 __device__ __host__ inline 
-void printr(const T (&arr)[A][B])
+void printr(const T (&arr)[A][B], const char *fmt = "%.2f")
 {
   printf("\n");
   for (size_t i = 0; i < A; i++) {
     printf("[");
     for (size_t j = 0; j < B; j++) {
-      printf("%.2f", static_cast<float>(arr[i][j]));
+      printf(fmt, static_cast<float>(arr[i][j]));
       if (j < B - 1) {
         printf(", ");
       }
@@ -84,7 +85,7 @@ void printr(const T (&arr)[A][B])
 
 template <typename T, int A, int B, int C>
 __device__ __host__ inline 
-void printr(const T (&arr)[A][B][C])
+void printr(const T (&arr)[A][B][C], const char *fmt = "%.2f")
 {
   printf("\n[");
   for (size_t i = 0; i < A; i++) {
@@ -92,7 +93,7 @@ void printr(const T (&arr)[A][B][C])
     for (size_t j = 0; j < B; j++) {
       printf("[");
       for (size_t k = 0; k < C; k++) {
-        printf("%.2f", static_cast<float>(arr[i][j][k]));
+        printf(fmt, static_cast<float>(arr[i][j][k]));
         if (k < C - 1) {
           printf(", ");
         }
@@ -110,9 +111,44 @@ void printr(const T (&arr)[A][B][C])
   printf("]\n");
 }
 
+template <typename T, int A, int B, int C, int D>
+__device__ __host__ inline 
+void printr(const T (&arr)[A][B][C][D], const char *fmt = "%.2f")
+{
+  printf("\n[");
+  for (size_t i = 0; i < A; i++) {
+    printf("[");
+    for (size_t j = 0; j < B; j++) {
+      printf("[");
+      for (size_t k = 0; k < C; k++) {
+        printf("[");
+        for (size_t l = 0; l < D; l++) {
+          printf(fmt, static_cast<float>(arr[i][j][k][l]));
+          if (l < D - 1) {
+            printf(", ");
+          }
+        }
+        printf("]");
+        if (k < C - 1) {
+          printf(",\n   ");
+        }
+      }
+      printf("]");
+      if (j < B - 1) {
+        printf(",\n\n  ");
+      }
+    }
+    printf("]");
+    if (i < A - 1) {
+      printf(",\n\n\n ");
+    }
+  }
+  printf("]\n");
+}
+
 template <typename T, int A>
 __device__ __host__ inline 
-void printr(const T (&arr)[A], char fmt[5] = "%.2f\0")
+void printr(const T (&arr)[A], const char *fmt = "%.2f")
 {
   printf("\n");
   printf("[");
@@ -126,6 +162,21 @@ void printr(const T (&arr)[A], char fmt[5] = "%.2f\0")
   printf("\n");
 }
 
+template <typename T, int A>
+__device__ __host__ inline
+void assert_isclose(
+  const T (&expected_yvec)[A], const T (&yvec)[A])
+{
+  for (int i = 0; i < A; i++) {
+    if (fabs(static_cast<float>(expected_yvec[i]) - static_cast<float>(yvec[i])) > 1e-5) {
+      printf("Assertion failed at [%i]: expected %.6f, got %.6f\n",
+             i, static_cast<float>(expected_yvec[i]), static_cast<float>(yvec[i]));
+      assert(false);
+    }
+  }
+  printf("All values are close within tolerance.\n");
+}
+
 template <typename T, int A, int B>
 __device__ __host__ inline
 void assert_isclose(
@@ -136,7 +187,7 @@ void assert_isclose(
       if (fabs(static_cast<float>(expected_yvec[i][j]) - static_cast<float>(yvec[i][j])) > 1e-5) {
         printf("Assertion failed at [%i][%i]: expected %.6f, got %.6f\n",
                i, j, static_cast<float>(expected_yvec[i][j]), static_cast<float>(yvec[i][j]));
-        return;
+        assert(false);
       }
     }
   }

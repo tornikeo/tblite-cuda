@@ -209,6 +209,29 @@ void test_gemv321_2()
   assert_isclose(expected_yvec, yvec);
 }
 
+
+__global__
+void test_gemv422_0()
+{
+  printf("========================================\n");
+  printf("Test in %s at %s:%d\n", __func__, __FILE__, __LINE__);
+  printf("========================================\n");
+  float amat[2][3][2][3] = { {  {   {   0.00000000,    0.00000000,    0.00000000   },    {   0.00000000,    0.00000000,    0.00000000   }  },   {   {   0.00000000,    0.00000000,    0.00000000   },    {   0.00000000,    0.00000000,    0.00000000   }  },   {   {   0.00000000,    0.00000000,    0.00000000   },    {   0.00000000,    0.00000000,    0.00000000   }  } },  {  {   {   0.00000000,    0.00000000,    0.00000000   },    {   0.00000000,    0.00000000,    0.00000000   }  },   {   {  -0.00050732,    0.00000000,    0.00000000   },    {   0.00000000,    0.00000000,    0.00000000   }  },   {   {   0.00000000,    0.00000000,    0.00000000   },    {   0.00000000,    0.00000000,    0.00000000   }  } }};
+  float xvec[2][3] = { {   0.00000000,    0.00000000,    0.00000000},  {   0.00000000,    0.00000000,    0.00000000}};
+  float yvec[2][3] = { {  -0.00000000,    0.00000000,   -4.86079290},  {  -0.00000000,    0.00000000,   -4.49576529}};
+  float expected_yvec[2][3] = { {  -0.00063932,    0.00000000,   -4.86079290},  {  -0.00064740,    0.00000000,   -4.49576529}};
+  float alpha = 1;
+  float beta = 0;
+  bool trans = false;
+  
+  printf("\n amat = "); printr(amat, "%.6f");
+  printf("\n xvec = "); printr(xvec, "%.6f"); 
+  gemv422(amat, xvec, yvec, alpha, beta, trans);
+  printf("========== result =========");
+  printf("\n yvec = "); printr(yvec, "%.6f"); 
+  assert_isclose(expected_yvec, yvec);
+}
+
 void test_blas()
 {
   {
@@ -246,25 +269,33 @@ void test_blas()
   gpuErrchk(cudaDeviceSynchronize());
   }
   {
-  cudaDeviceSetLimit(cudaLimitStackSize, 1024 * sizeof(float));
-  cudaDeviceSetLimit(cudaLimitMallocHeapSize, 128 * 1024 * 1024);
-  test_gemv321_0<<<1, 1>>>();
-  gpuErrchk(cudaPeekAtLastError());
-  gpuErrchk(cudaDeviceSynchronize());
+  // cudaDeviceSetLimit(cudaLimitStackSize, 1024 * sizeof(float));
+  // cudaDeviceSetLimit(cudaLimitMallocHeapSize, 128 * 1024 * 1024);
+  // test_gemv321_0<<<1, 1>>>();
+  // gpuErrchk(cudaPeekAtLastError());
+  // gpuErrchk(cudaDeviceSynchronize());
 
   
-  cudaDeviceSetLimit(cudaLimitStackSize, 1024 * sizeof(float));
-  cudaDeviceSetLimit(cudaLimitMallocHeapSize, 128 * 1024 * 1024);
-  test_gemv321_1<<<1, 1>>>();
-  gpuErrchk(cudaPeekAtLastError());
-  gpuErrchk(cudaDeviceSynchronize());
+  // cudaDeviceSetLimit(cudaLimitStackSize, 1024 * sizeof(float));
+  // cudaDeviceSetLimit(cudaLimitMallocHeapSize, 128 * 1024 * 1024);
+  // test_gemv321_1<<<1, 1>>>();
+  // gpuErrchk(cudaPeekAtLastError());
+  // gpuErrchk(cudaDeviceSynchronize());
 
-  cudaDeviceSetLimit(cudaLimitStackSize, 1024 * sizeof(float));
-  cudaDeviceSetLimit(cudaLimitMallocHeapSize, 128 * 1024 * 1024);
-  test_gemv321_2<<<1, 1>>>();
-  gpuErrchk(cudaPeekAtLastError());
-  gpuErrchk(cudaDeviceSynchronize());
+  // cudaDeviceSetLimit(cudaLimitStackSize, 1024 * sizeof(float));
+  // cudaDeviceSetLimit(cudaLimitMallocHeapSize, 128 * 1024 * 1024);
+  // test_gemv321_2<<<1, 1>>>();
+  // gpuErrchk(cudaPeekAtLastError());
+  // gpuErrchk(cudaDeviceSynchronize());
   }
+  {
+    cudaDeviceSetLimit(cudaLimitStackSize, 1024 * sizeof(float));
+    cudaDeviceSetLimit(cudaLimitMallocHeapSize, 128 * 1024 * 1024);
+    test_gemv422_0<<<1, 1>>>();
+    gpuErrchk(cudaPeekAtLastError());
+    gpuErrchk(cudaDeviceSynchronize());
+  }
+  
   // cudaDeviceSetLimit(cudaLimitStackSize, 1024 * sizeof(float));
   // cudaDeviceSetLimit(cudaLimitMallocHeapSize, 128 * 1024 * 1024);
   // // test_gemv_1<<<1, 1>>>();
@@ -279,5 +310,4 @@ void test_blas()
   // test_gemv422<<<1, 1>>>();
   // gpuErrchk(cudaPeekAtLastError());
   // gpuErrchk(cudaDeviceSynchronize());
-  
 }

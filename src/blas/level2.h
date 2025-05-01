@@ -173,15 +173,58 @@ void gemv422(const float *A, const float *x, float *y,
   // }
 }
 
+template <int N, int D>
+__device__ __host__ inline  
+void gemv422(
+  const float (&amat)[N][D][N][D], 
+  const float (&xvec)[N][D], 
+  float (&yvec)[N][D],
+  const float alpha, 
+  const float beta,
+  const bool transpose
+)
+{
+  if(transpose) // (N*D,N*D)**T @ N*D + N*D
+  {
+    for (int i = 0; i < N; i++)
+    {
+      for (int j = 0; j < D; j++)
+      {
+        float temp = 0;
+        for (int k = 0; k < N; k++)
+        {
+          for (int l = 0; l < D; l++)
+          {
+            temp += amat[k][l][i][j] * xvec[k][l];
+          }
+        }
+        yvec[i][j] = alpha * temp + beta * yvec[i][j];
+      }
+    }
+  } else { // N*D,N*D @ N*D + N*D
+    for (int i = 0; i < N; i++) {
+      for (int j = 0; j < D; j++) {
+        float temp = 0.0f;
+        for (int k = 0; k < N; k++) {
+          for (int l = 0; l < D; l++) {
+              temp += amat[i][j][k][l] * xvec[k][l];
+          }
+        }
+        yvec[i][j] = alpha * temp + beta * yvec[i][j];
+      }
+    }
+  }
+}
+
 template <int N, int M, int L, int K, int O, int P>
 __device__ __host__ inline 
 void gemv312(
   const float (&amat)[N][M][L], 
   const float (&xvec)[K], 
   float (&yvec)[O][P],
-  float alpha, 
-  float beta,
-  bool transpose
+  const float alpha, 
+  const float beta,
+  const bool transpose
 )
 {
   if(transpose) // (N,M*L)^T @ K + O,P
@@ -224,9 +267,9 @@ void gemv321(
   const float (&amat)[N][M][L], 
   const float (&xvec)[K][O], 
   float (&yvec)[P],
-  float alpha, 
-  float beta,
-  bool transpose
+  const float alpha, 
+  const float beta,
+  const bool transpose
 )
 {
   if (transpose) // (N*M,L)**T @ K*O + P
