@@ -218,5 +218,50 @@ void gemv312(
   }
 }
 
+template <int N, int M, int L, int K, int O, int P>
+__device__ __host__ inline 
+void gemv321(
+  const float (&amat)[N][M][L], 
+  const float (&xvec)[K][O], 
+  float (&yvec)[P],
+  float alpha, 
+  float beta,
+  bool transpose
+)
+{
+  if (transpose) // (N*M,L)**T @ K*O + P
+  {
+    assert(L == P);
+    assert(N * M == K * O);
+    for (int i = 0; i < L; i++)
+    {
+      float temp = 0;
+      for (int j = 0; j < N; j++)
+      {
+        for (int k = 0; k < M; k++)
+        {
+          temp += amat[j][k][i] * xvec[j][k];
+        }
+      }
+      yvec[i] = alpha * temp + beta * yvec[i];
+    }
+  } else { // N,M*L @ K*O + P
+    assert(N == P);    
+    assert(M * L == K * O);
+    for (int i = 0; i < N; i++)
+    {
+      float temp = 0;
+      for (int j = 0; j < M; j++)
+      {
+        for (int k = 0; k < L; k++)
+        {
+          temp += amat[i][j][k] * xvec[j][k];
+        }
+      }
+      yvec[i] = alpha * temp + beta * yvec[i];
+    }
+  }
+}
+
 void test_blas();
 #endif
