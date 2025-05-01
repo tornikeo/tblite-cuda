@@ -62,7 +62,8 @@ void gemv(
   }
 }
 
-__global__ void test_gemv()
+__global__ 
+void test_gemv_0()
 {
   printf("========================================\n");
   float amat[3][2] {0}; arange(amat);
@@ -81,7 +82,34 @@ __global__ void test_gemv()
   float expected_yvec[2] {6, 8};
   printf("\n result = "); printr(yvec);
 
-  for (int i = 0; i < MAX_NAO; ++i)
+  for (int i = 0; i < 2; ++i)
+  {
+    assert(fabs(yvec[i] - expected_yvec[i]) < 1e-5 && "Assertion failed for yvec[i]");
+  }
+}
+
+__global__
+void test_gemv_1()
+{
+  printf("========================================\n");
+  float amat[3][2] {0}; arange(amat);
+  float xvec[2] {1, 1};
+  float yvec[3] {0};
+
+  const float alpha = 1.0f;
+  const float beta = 1.0f;
+  const bool trans = false;
+
+  printf("\n amat = "); printr(amat);
+  printf("\n xvec = "); printr(xvec); 
+  gemv(amat, xvec, yvec, alpha, beta, trans);
+  printf("========== result =========");
+
+  // Expected results
+  float expected_yvec[3] {1, 5, 9};
+  printf("\n result = "); printr(yvec);
+
+  for (int i = 0; i < 3; ++i)
   {
     assert(fabs(yvec[i] - expected_yvec[i]) < 1e-5 && "Assertion failed for yvec[i]");
   }
@@ -257,11 +285,33 @@ __global__ void test_gemv422()
 
 void test_blas()
 {
+  // cudaDeviceSetLimit(cudaLimitStackSize, 1024 * sizeof(float));
+  // cudaDeviceSetLimit(cudaLimitMallocHeapSize, 128 * 1024 * 1024);
+  // test_gemv_0<<<1, 1>>>();
+  // gpuErrchk(cudaPeekAtLastError());
+  // gpuErrchk(cudaDeviceSynchronize());
+
+
   cudaDeviceSetLimit(cudaLimitStackSize, 1024 * sizeof(float));
   cudaDeviceSetLimit(cudaLimitMallocHeapSize, 128 * 1024 * 1024);
-  test_gemv<<<1, 1>>>();
-  test_gemv312<<<1, 1>>>();
-  test_gemv422<<<1, 1>>>();
+  test_gemv_1<<<1, 1>>>();
   gpuErrchk(cudaPeekAtLastError());
   gpuErrchk(cudaDeviceSynchronize());
+  
+  
+  // cudaDeviceSetLimit(cudaLimitStackSize, 1024 * sizeof(float));
+  // cudaDeviceSetLimit(cudaLimitMallocHeapSize, 128 * 1024 * 1024);
+  // // test_gemv_1<<<1, 1>>>();
+
+  // test_gemv312<<<1, 1>>>();
+  // gpuErrchk(cudaPeekAtLastError());
+  // gpuErrchk(cudaDeviceSynchronize());
+
+  // cudaDeviceSetLimit(cudaLimitStackSize, 1024 * sizeof(float));
+  // cudaDeviceSetLimit(cudaLimitMallocHeapSize, 128 * 1024 * 1024);
+  // // test_gemv_1<<<1, 1>>>();
+  // test_gemv422<<<1, 1>>>();
+  // gpuErrchk(cudaPeekAtLastError());
+  // gpuErrchk(cudaDeviceSynchronize());
+  
 }
