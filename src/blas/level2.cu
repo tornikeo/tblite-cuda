@@ -1,7 +1,9 @@
 #include "../limits.h"
 #include "../utils/gpu.h"
+#include "../utils/array.h"
 #include <stdio.h>
 #include <cassert>
+#include <curand.h>
 #include <cmath>
 
 
@@ -25,36 +27,35 @@ void symv(
   }
 }
 
+template <int N, int M, int L, int K>
 __device__ __host__
 void gemv( 
-  const float (&amat)[MAX_NAO][MAX_NAT],
-  const float (&xvec)[MAX_NAT],
-  float (&yvec)[MAX_NAO],
+  const float (&amat)[N][M],
+  const float (&xvec)[L],
+  float (&yvec)[K],
   const float alpha,
   const float beta,
   const bool trans
 )
 {
-  if (!trans)
+  if(trans) // M,N @ L + K
   {
-    for (int i = 0; i < MAX_NAO; i++)
-    {
+    assert(N == L);
+    assert(M == K);
+    for (int i = 0; i < M; i++) {
       float temp = 0.0f;
-      for (int j = 0; j < MAX_NAT; j++)
-      {
-        temp += amat[i][j] * xvec[j];
+      for (int j = 0; j < N; j++) {
+        temp += amat[j][i] * xvec[j];
       }
       yvec[i] = alpha * temp + beta * yvec[i];
     }
-  }
-  else
-  {
-    for (int i = 0; i < MAX_NAT; i++)
-    {
+  } else { // N,M @ L + K
+    assert(M == L);
+    assert(N == K);
+    for (int i = 0; i < N; i++) {
       float temp = 0.0f;
-      for (int j = 0; j < MAX_NAO; j++)
-      {
-        temp += amat[j][i] * xvec[j];
+      for (int j = 0; j < M; j++) {
+        temp += amat[i][j] * xvec[j];
       }
       yvec[i] = alpha * temp + beta * yvec[i];
     }
@@ -63,22 +64,23 @@ void gemv(
 
 __global__ void test_gemv()
 {
-  const float amat[MAX_NAO][MAX_NAT] = {1,2,3};
-  const float xvec[MAX_NAT] = {1.0f, 2.0f, 3.0f};
-  float yvec[MAX_NAO] = {0.0f, 0.0f, 0.0f};
-  const float alpha = 2.0f;
+  printf("========================================\n");
+  float amat[3][2] {0}; arange(amat);
+  float xvec[3] {0, 1, 1};
+  float yvec[2] {0};
+
+  const float alpha = 1.0f;
   const float beta = 1.0f;
-  const bool trans = false;
-
+  const bool trans = true;
+  printf("\n amat = "); printr(amat);
+  printf("\n xvec = "); printr(xvec); 
   gemv(amat, xvec, yvec, alpha, beta, trans);
-
-  // Print the result
-  printf("Result yvec: [%f, %f, %f]\n", yvec[0], yvec[1], yvec[2]);
+  printf("========== result =========");
 
   // Expected results
-  float expected_yvec[MAX_NAO] = {8.0f, 17.0f, 26.0f};
+  float expected_yvec[2] {6, 8};
+  printf("\n result = "); printr(yvec);
 
-  // Assert the results
   for (int i = 0; i < MAX_NAO; ++i)
   {
     assert(fabs(yvec[i] - expected_yvec[i]) < 1e-5 && "Assertion failed for yvec[i]");
