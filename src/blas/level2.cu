@@ -85,7 +85,7 @@ void test_gemv422()
 }
 
 __global__
-inline void test_gemv312_0()
+void test_gemv312_0()
 {
   printf("========================================\n");
   float amat[2][3][2] {0}; arange(amat);
@@ -101,13 +101,10 @@ inline void test_gemv312_0()
   printf("========== result =========");
 
   // Expected results
-  float expected_yvec[2][3] {1,2,3,4,5,6};
+  float expected_yvec[2][3] {1, 5, 9, 13, 17, 21};
   printf("\n result = "); printr(yvec);
 
-  // for (int i = 0; i < 2; ++i)
-  // {
-  //   assert(fabs(yvec[i] - expected_yvec[i]) < 1e-5 && "Assertion failed for yvec[i]");
-  // }
+  assert_isclose(expected_yvec, yvec);
 }
 
 void test_blas()

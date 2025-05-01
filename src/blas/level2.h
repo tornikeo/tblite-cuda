@@ -176,27 +176,33 @@ void gemv422(const float *A, const float *x, float *y,
 template <int N, int M, int L, int K, int O, int P>
 __device__ __host__ inline 
 void gemv312(
-  const float (&A)[N][M][L], 
-  const float (&x)[K], 
-  const float (&y)[O][P],
+  const float (&amat)[N][M][L], 
+  const float (&xvec)[K], 
+  float (&yvec)[O][P],
   float alpha, 
   float beta,
   bool transpose
 )
 {
-  // size_t flattened_rows = dim1 * dim2;
-  // size_t cols = dim3;
-  // // printf("gemv312 called with A(%i %i %i) @ x(%i) + y(%i %i)\n", dim1, dim2, dim3, )
-  // if (!transpose)
-  // {
-  //   // Flatten the first two dimensions and call gemv
-  //   gemv(A, x, y, flattened_rows, cols, alpha, beta, false);
-  // }
-  // else
-  // {
-  //   // Transpose case: treat A as if it were transposed
-  //   gemv(A, x, y, cols, flattened_rows, alpha, beta, true);
-  // }
+  if(transpose)
+  {
+
+  } else { // N*M,L @ K + O,P
+    assert(L == K);
+    assert(O * P == N * M);
+    for (int i = 0; i < O; i++)
+    {
+      for (int j = 0; j < P; j++)
+      {
+        float temp = 0;
+        for (int k = 0; k < K; k++)
+        {
+          temp += amat[i][j][k] * xvec[k];
+        }
+        yvec[i][j] = alpha * temp + beta * yvec[i][j];
+      }
+    }
+  }
 }
 
 void test_blas();

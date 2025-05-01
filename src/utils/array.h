@@ -126,6 +126,22 @@ void printr(const T (&arr)[A])
   printf("\n");
 }
 
+template <typename T, int A, int B>
+__device__ __host__ inline
+void assert_isclose(
+  const T (&expected_yvec)[A][B], const T (&yvec)[A][B])
+{
+  for (size_t i = 0; i < A; i++) {
+    for (size_t j = 0; j < B; j++) {
+      if (fabs(static_cast<float>(expected_yvec[i][j]) - static_cast<float>(yvec[i][j])) > 1e-5) {
+        printf("Assertion failed at [%zu][%zu]: expected %.5f, got %.5f\n",
+               i, j, static_cast<float>(expected_yvec[i][j]), static_cast<float>(yvec[i][j]));
+        return;
+      }
+    }
+  }
+  printf("All values are close within tolerance.\n");
+}
 
 // 1D array
 template <typename T, size_t A>
