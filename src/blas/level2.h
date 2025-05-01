@@ -184,9 +184,22 @@ void gemv312(
   bool transpose
 )
 {
-  if(transpose)
+  if(transpose) // (N,M*L)^T @ K + O,P
   {
-
+    assert(N == K);
+    assert(M*L == O*P);
+    for (int i = 0; i < O; i++)
+    {
+      for (int j = 0; j < P; j++)
+      {
+        float temp = 0;
+        for (int k = 0; k < N; k++)
+        {
+          temp += amat[k][i][j] * xvec[k];
+        }
+        yvec[i][j] = alpha * temp + beta * yvec[i][j];
+      }
+    }
   } else { // N*M,L @ K + O,P
     assert(L == K);
     assert(O * P == N * M);
