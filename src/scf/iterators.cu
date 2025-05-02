@@ -6,7 +6,7 @@
 #include "../wavefunction/fermi.h"
 #include "../wavefunction/mulliken.h"
 #include "potential.h"
-
+#include "../utils/error.h"
 __device__
 // constexpr 
 int get_mixer_dimension(
@@ -182,8 +182,8 @@ void get_density(
   wavefunction_type &wfn,
   sygvd_solver &solver,
   const integral_type &ints,
-  float &ts
-  /* error &err*/
+  float &ts,
+  error_type &err
 )
 {
   /*    
@@ -202,8 +202,8 @@ void get_density(
     solver.solve(
       wfn.coeff[0], 
       ints.overlap,
-      wfn.emo[0]
-      /*error,*/
+      wfn.emo[0],
+      err
     );
     /* wfn%focc(:, :) = 0.0_wp */
     for (int i = 0; i < MAX_NSPIN; ++i) {
@@ -331,8 +331,8 @@ void next_scf(
   coulomb_cache &cache, /* NOTE: Not an abstract container_cache since we don't mess with the polymorphism for now */
   /*container_cache &dcache,*/
   /*container_cache &icache,*/
-  float (&energies)[MAX_NAT]
-  /*error_type &error*/
+  float (&energies)[MAX_NAT],
+  error_type &error
 ) {
   // printf("NEXT SCF %i\n", iscf);
   float eao[MAX_NAO] = {0};
@@ -361,7 +361,7 @@ void next_scf(
 
   set_mixer(mixer, wfn, info);
 
-  get_density(wfn, solver, ints, ts /*,error*/);
+  get_density(wfn, solver, ints, ts, error);
 
   /* call get_mulliken_shell_charges(bas, ints%overlap, wfn%density, wfn%n0sh, &
       & wfn%qsh)*/

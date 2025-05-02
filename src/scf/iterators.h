@@ -9,6 +9,7 @@
 #include "broyden.h"
 #include "../lapack/sygvd.h"
 #include "../wavefunction/type.h"
+#include "../utils/error.h"
 #include "../coulomb.h"
 #include "potential.h"
 
@@ -111,8 +112,8 @@ void next_scf(
   coulomb_cache &cache,
   /*container_cache &dcache,*/
   /*container_cache &icache,*/
-  float (&energies)[MAX_NAT]
-  /*error_type &error*/
+  float (&energies)[MAX_NAT],
+  error_type &error
 );
 
 

@@ -240,6 +240,7 @@ __device__ void xtb_singlepoint(
   integral_type ints = {0};
   broyden_mixer mixer = {0};
   sygvd_solver sygvd = {0};
+  error_type error;
 
   // gradient(:, :) = 0.0_wp
   // sigma(:, :) = 0.0_wp
@@ -419,18 +420,32 @@ __device__ void xtb_singlepoint(
   next_scf(
     iscf, mol, calc.bas, wfn, sygvd, mixer, info,
     calc.coulomb, /*calc.dispersion,*/ /*calc.interactions,*/ ints,
-    pot, ccache, /*icache,*/ eelec /*error*/
+    pot, ccache, /*icache,*/ eelec, error
   );
-  
+
+  /*econverged = abs(sum(eelec) - elast) < econv
+      pconverged = mixer%get_error() < pconv
+      converged = econverged .and. pconverged*/
+  const bool econverged = abs(sum(eelec) - elast) < econv;
+  const bool pconverged = mixer.get_error() < pconv;
+  bool converged = econverged && pconverged;
   if (prlevel > 0)
   {
-    printf("%7d %24.13f %16.7e \n", /*%16.7e*/
+    printf("%7d %24.13f %16.7e %16.7e \n",
          iscf, 
          sum(eelec) + sum(energies), 
-         sum(eelec) - elast
-        /*mixer.get_error()*/);
+         sum(eelec) - elast,
+         mixer.get_error());
+  }
+  if (error.stat != 0)
+  {
+    printf("%s", error.message);
+    printf("next_scf error at %s:%d\n", __FILE__, __LINE__);
+    assert(false && "next_scf error");
   }
  }
+
+ 
 }
 
 __global__ void test_xtb_singlepoint()

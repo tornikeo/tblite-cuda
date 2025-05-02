@@ -1,6 +1,7 @@
 #ifndef SCF_BROYDEN_H
 #define SCF_BROYDEN_H
 #include "../limits.h"
+#include "../utils/array.h"
 /*
    type :: broyden_mixer
       integer :: ndim
@@ -71,6 +72,28 @@ class broyden_mixer
   void set(const float *qvec, int size);
   __device__
   void diff(const float *qsh, int size);
+  /*
+  pure function get_error(self) result(error)
+   class(broyden_mixer), intent(in) :: self
+   real(wp) :: error
+   integer :: i
+   error = 0.0_wp
+   do i = 1, size(self%dq)
+      error = error + self%dq(i)**2 / size(self%dq)
+   end do
+   error = sqrt(error)
+end function get_error*/
+  __device__ inline
+  float get_error() const
+  {
+    float error = 0;
+    for (int i = 0; i < ndim; i++)
+    {
+      error = error + (dq[i]*dq[i]) / ndim;
+    }
+    error = sqrt(error); 
+    return error;
+  }
 } ;
 
 

@@ -2,6 +2,9 @@
 #include <stdio.h>
 #include <cassert>
 #include <math.h>
+#include "../utils/error.h"
+#include "../utils/gpu.h"
+#include "../utils/array.h"
 
 /*
 pure subroutine ssygvd(itype, jobz, uplo, n, a, lda, b, ldb, w, work, lwork, &
@@ -28,6 +31,8 @@ pure subroutine ssygvd(itype, jobz, uplo, n, a, lda, b, ldb, w, work, lwork, &
 __device__ 
 void cholesky_upper(const int n, float* b, const int ldb, int* info) {
   // Cholesky factorization: B = Uᵀ U
+  printf("Cholesky, before");
+  printr(n,n,b);
   for (int j = 0; j < n; ++j) {
     for (int k = 0; k < j; ++k) {
       b[k * ldb + j] /= b[k * ldb + k];
@@ -41,8 +46,28 @@ void cholesky_upper(const int n, float* b, const int ldb, int* info) {
     }
     b[j * ldb + j] = sqrtf(b[j * ldb + j]);
   }
+  printf("Cholesky, after");
+  printr(n,n,b);
 }
 
+__global__ 
+void test_cholesky_upper_0()
+{
+  float b[3][3] = {
+    {10.00, 2.00, 3.00},
+    {2.00, 10.00, 5.00},
+    {3.00, 5.00, 10.00}};
+  float tol = 1e-2f;
+  bool test_passed = true;
+  float expected_b[3][3] = {
+    {3.16227766f, 0.63245553f, 0.94868330f},
+    {2.00f,      3.09838668f, 1.42f},
+    {3.00f,      5.00f,      2.6615}};
+  int n = 3;
+  int info = 0;
+  cholesky_upper(3, &b[0][0], 3, &info);
+  assert_isclose(expected_b, b, 1e-2);
+}
 __device__
 void two_sided_trsm_upper(const int n, float* a, const int lda, float* u, const int ldu) {
   // Perform A := U^{-T} * A * U^{-1}
@@ -174,16 +199,21 @@ void ssygvd(
   jacobi_eigenvalue(n, a, lda, w, a, lda, info);
 }
 
+
 __global__
-void test_ssygvd_kernel() {
+void test_ssygvd_0()
+{
+  printf("========================================\n");
+  printf("Test in %s at %s:%d\n", __func__, __FILE__, __LINE__);
+  printf("========================================\n");
   // Example small 2x2 matrices (easy to verify manually)
   const int n = 2;
   const int lda = n;
   const int ldb = n;
   float A[lda * n] = { 4.0f, 1.0f,
-                       1.0f, 3.0f };
+                        1.0f, 3.0f };
   float B[ldb * n] = { 2.0f, 0.5f,
-                       0.5f, 1.5f };
+                        0.5f, 1.5f };
   float W[n]; // eigenvalues
   float Work[1]; // dummy
   int IWork[1];  // dummy
@@ -197,10 +227,71 @@ void test_ssygvd_kernel() {
     return;
   }
 
+  printf("========== result =========");
+  
   // Output eigenvalues
   printf("Eigenvalues:\n");
   for (int i = 0; i < n; ++i) {
     printf("W[%d] = %f\n", i, W[i]);
+  }
+  
+
+  // Output eigenvectors (stored in A)
+  printf("Eigenvectors (columns):\n");
+  for (int i = 0; i < n; ++i) {
+    for (int j = 0; j < n; ++j) {
+      printf("%f ", A[i * lda + j]);
+    }
+    printf("\n");
+  }
+  
+  // assert_isclose(expected_yvec, yvec);
+}
+
+
+__global__
+void test_ssygvd_1()
+{
+  printf("========================================\n");
+  printf("Test in %s at %s:%d\n", __func__, __FILE__, __LINE__);
+  printf("========================================\n");
+  // Example small 2x2 matrices (easy to verify manually)
+  const int n = 3;
+  const int lda = n;
+  const int ldb = n;
+  /*
+    *       | 3.5 0.5 0 |
+    *   A = | 0.5 3.5 0 |
+    *       | 0   0   2 |
+    *
+    *       | 10  2   3 |
+    *   B = | 2  10   5 |
+    *       | 3   5  10 |
+    */
+  float A[3][3] = {3.5, 0.5, 0, 0.5, 3.5, 0.0, 0.0, 0.0, 2.0};
+  float B[3][3] = {10.0, 2.0, 3.0, 2.0, 10.0, 5.0, 3.0, 5.0, 10.0};
+  float expected_lambda[] = {0.158660256604, 0.370751508101882, 0.6}; // Known eigenvalues
+  float lambda[n] = {0};
+  float Work[1]; // dummy
+  int IWork[1];  // dummy
+  int Info = 0;
+
+  printf("A = \n"); printr(A); printf("\n");
+  printf("B = \n"); printr(B); printf("\n");
+  // Call the naive ssygvd
+  ssygvd(1, 'v', 'u', n, &A[0][0], lda, &B[0][0], ldb, &lambda[0], Work, 1, IWork, 1, &Info);
+
+  if (Info != 0) {
+    printf("ssygvd failed with info = %d\n", Info);
+    return;
+  }
+
+  printf("========== result =========\n");
+  
+  // Output eigenvalues
+  printf("Eigenvalues:\n");
+  for (int i = 0; i < n; ++i) {
+    printf("W[%d] = %f\n", i, lambda[i]);
   }
 
   // Output eigenvectors (stored in A)
@@ -211,20 +302,17 @@ void test_ssygvd_kernel() {
     }
     printf("\n");
   }
+
+  assert_isclose(expected_lambda, lambda);
 }
 
-
-void test_sygvd()
-{
-  test_ssygvd_kernel<<<1, 1>>>();
-  cudaDeviceSynchronize();
-}
 
 __device__
 void sygvd_solver::solve(
         float (&hmat)[MAX_NAO][MAX_NAO],
   const float (&smat)[MAX_NAO][MAX_NAO],
-        float (&eval)[MAX_NAO]
+        float (&eval)[MAX_NAO],
+        error_type &err /* TODO: Priority medium. Err is not used. */
 )
 {
   n = MAX_NAO;
@@ -309,5 +397,31 @@ void sygvd_solver::solve(
       printf("%f ", hmat[i][j]);
     }
     printf("\n");
+  }
+}
+
+
+
+void test_sygvd()
+{
+  {
+    cudaDeviceSetLimit(cudaLimitStackSize, 1024 * sizeof(float));
+    cudaDeviceSetLimit(cudaLimitMallocHeapSize, 128 * 1024 * 1024);
+    test_cholesky_upper_0<<<1, 1>>>();
+    gpuErrchk(cudaPeekAtLastError());
+    gpuErrchk(cudaDeviceSynchronize());
+
+
+    // cudaDeviceSetLimit(cudaLimitStackSize, 1024 * sizeof(float));
+    // cudaDeviceSetLimit(cudaLimitMallocHeapSize, 128 * 1024 * 1024);
+    // test_ssygvd_0<<<1, 1>>>();
+    // gpuErrchk(cudaPeekAtLastError());
+    // gpuErrchk(cudaDeviceSynchronize());
+
+    // cudaDeviceSetLimit(cudaLimitStackSize, 1024 * sizeof(float));
+    // cudaDeviceSetLimit(cudaLimitMallocHeapSize, 128 * 1024 * 1024);
+    // test_ssygvd_1<<<1, 1>>>();
+    // gpuErrchk(cudaPeekAtLastError());
+    // gpuErrchk(cudaDeviceSynchronize());
   }
 }

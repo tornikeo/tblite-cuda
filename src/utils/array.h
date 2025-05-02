@@ -129,6 +129,26 @@ void fill(T (&arr)[A][B][C][D], T value) {
   }
 }
 
+__device__ inline
+void printr(int n, int m, const float *arr, const char *fmt = "%.2f")
+{
+  printf("\n");
+  for (size_t i = 0; i < n; i++) {
+    printf("[");
+    for (size_t j = 0; j < m; j++) {
+      printf(fmt, static_cast<float>(arr[i * m + j]));
+      if (j < m - 1) {
+        printf(", ");
+      }
+    }
+    printf("]");
+    if (i < n - 1) {
+      printf(",\n");
+    }
+  }
+  printf("\n");
+}
+
 template <typename T, int A, int B>
 __device__ __host__ inline 
 void printr(const T (&arr)[A][B], const char *fmt = "%.2f")
@@ -247,11 +267,11 @@ void assert_isclose(
 template <typename T, int A, int B>
 __device__ __host__ inline
 void assert_isclose(
-  const T (&expected_yvec)[A][B], const T (&yvec)[A][B])
+  const T (&expected_yvec)[A][B], const T (&yvec)[A][B], const float atol=1e-5)
 {
   for (int i = 0; i < A; i++) {
     for (int j = 0; j < B; j++) {
-      if (fabs(static_cast<float>(expected_yvec[i][j]) - static_cast<float>(yvec[i][j])) > 1e-5) {
+      if (fabs(static_cast<float>(expected_yvec[i][j]) - static_cast<float>(yvec[i][j])) > atol) {
         printf("Assertion failed at [%i][%i]: expected %.6f, got %.6f\n",
                i, j, static_cast<float>(expected_yvec[i][j]), static_cast<float>(yvec[i][j]));
         assert(false);
