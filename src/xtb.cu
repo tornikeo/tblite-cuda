@@ -4,6 +4,7 @@
 #include <cstdlib>
 #include "xtb.h"
 #include "utils/gpu.h"
+#include "utils/array.h"
 #include "basis/type.h"
 #include "potential.h"
 #include "adjlist.h"
@@ -13,16 +14,6 @@
 #include "scf/iterators.h"
 #include "lapack/sygvd.h"
 
-template<int N>
-__device__ inline float sum(const float (&arr)[N]) {
-  float val = 0;
-  #pragma unroll
-  for (int i = 0; i < N; i++)
-  { 
-    val += arr[i];
-  }
-  return val;
-}
 
 /*   !> Lattice points
    real(wp), intent(in) :: trans(:, :)
@@ -292,21 +283,23 @@ __device__ void xtb_singlepoint(
 
   // gradient(:, :) = 0.0_wp
   // sigma(:, :) = 0.0_wp
-  for (size_t i = 0; i < MAX_NAT; i++)
-  {
-    for (size_t j = 0; j < 3; j++)
-    {
-      gradient[i][j] = 0;
-    }
-  }
+  // for (size_t i = 0; i < MAX_NAT; i++)
+  // {
+  //   for (size_t j = 0; j < 3; j++)
+  //   {
+  //     gradient[i][j] = 0;
+  //   }
+  // }
+  zero(gradient);
 
-  for (size_t i = 0; i < 3; i++)
-  {
-    for (size_t j = 0; j < 3; j++)
-    {
-      sigma[i][j] = 0;
-    }
-  }
+  // for (size_t i = 0; i < 3; i++)
+  // {
+  //   for (size_t j = 0; j < 3; j++)
+  //   {
+  //     sigma[i][j] = 0;
+  //   }
+  // }
+  zero(sigma);
 
   /* if (allocated(calc%repulsion)) then */
     get_engrad(calc.repulsion, mol, erep, gradient, sigma);

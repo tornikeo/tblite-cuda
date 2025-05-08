@@ -125,6 +125,17 @@ typedef struct
   // dispersion_type dispersion;
 } xtb_calculator;
 
+__device__ void xtb_singlepoint(
+  const structure_type &mol,
+  const xtb_calculator &calc,
+  wavefunction_type &wfn,
+  const float accuracy,
+
+  float energy,
+  float (&gradient)[MAX_NAT][3],
+  float (&sigma)[3][3],
+  const int verbosity
+);
 void test_xtb();
 
 #endif

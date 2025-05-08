@@ -1,13 +1,12 @@
 #ifndef BASIS_SLATER_H
 #define BASIS_SLATER_H
-
-#define pi 3.1415926535897932384626433832795029
+#include "../limits.h"
 
 //> Number of functions
 const int nf = 15;
 
 //> Two over pi
-const float top = 2.0 / pi;
+const float top = 2.0 / 3.1415926535897932384626433832795029;
 
 //> Double factorial, see OEIS A001147
 const float dfactorial[8] = 
@@ -72,7 +71,7 @@ const float pCoeff2[2][nf] = {
 
 
 //> Exponents from third row Table I-V.
-const float pAlpha3[3, nf] = { 
+const float pAlpha3[3][nf] = { 
     2.227660584e+0, 4.057711562e-1, 1.098175104e-1,  // 1s
     2.581578398e+0, 1.567622104e-1, 6.018332272e-2,  // 2s
     5.641487709e-1, 6.924421391e-2, 3.269529097e-2,  // 3s
@@ -91,7 +90,7 @@ const float pAlpha3[3, nf] = {
     
 
 //> Coefficients from third row Table I-V.
-const float pCoeff3[3, nf] = { 
+const float pCoeff3[3][nf] = { 
     1.543289673e-1, 5.353281423e-1, 4.446345422e-1,  // 1s
   -5.994474934e-2, 5.960385398e-1, 4.581786291e-1,  // 2s
   -1.782577972e-1, 8.612761663e-1, 2.261841969e-1,  // 3s
@@ -338,5 +337,11 @@ const float pCoeff6p[6] = {
     2.782723680e-3,-1.282887780e-1,-2.266255943e-1,  // 6p
     4.682259383e-1, 6.752048848e-1, 1.091534212e-1};
 
-
+void slater_to_gauss(
+  const int ng, const int n, const int l, const float zeta, 
+  float (&alpha)[MAXG], 
+  float (&coeff)[MAXG],
+  const bool norm,
+  int &info
+);
 #endif

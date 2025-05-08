@@ -52,6 +52,7 @@ $(BUILD_DIR)/%.cu.o: %.cu
 	$(NVCC) -c $< -o $@ $(CPPFLAGS) $(NVCCFLAGS)
 
 
+
 .PHONY: clean
 clean:
 	rm -r $(BUILD_DIR)
