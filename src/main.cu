@@ -7,7 +7,6 @@
 
 int main()
 {
-
     // std::cout << "Running test_form_product..." << std::endl;
     // test_form_product<<<1, 1>>>();
     // cudaDeviceSynchronize();

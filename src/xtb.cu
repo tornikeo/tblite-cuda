@@ -184,6 +184,54 @@ __device__ void get_engrad(
 
 // __device__
 // void get_amat_0d()
+/*
+How should I break this up?
+
+From the outside:
+
+xtb_singlepoint loses __device__ attribute, becomes a regular host function instead
+xtb_singlepoint now calls 
+  __global__ get_engrad
+  __global__ new_potential
+  __global__ coulomb_update
+  __global__ get_occupation
+  __global__ get_alpha_beta_occupation
+  __global__ ncoord_get_cn
+  __global__ get_selfenergy
+  __global__ get_cutoff
+  __global__ new_adjacency_list
+  __global__ new_integral
+  __global__ get_hamiltonian
+  __global__ new_broyden
+
+  while not converged:
+    next_scf(iscf++)
+  __global__ get_hamiltonian_gradient
+
+next_scf(iscf, mol, bas, wfn, solv, mixer, info, coul, ints,
+  pot, cache, energies, err) a host function, now calls:
+  __global__ pot_reset() sets potential to zero
+  __global__ coulomb.get_potential()
+  __global__ add_pot_to_h1
+  __global__ set_mixer
+  get_density(wfn, solver, ints, ts, error)
+  ... others __global__ too
+
+get_density(wfn, solver, ints, ts, error)
+  solver.solve(
+    wfn.coeff [B, ...]
+    ints.overlap [B, ...]
+    wfn.emo [B, ...]
+    err [B, ...]
+  )
+  ... the rest do __global__ steps
+
+solver.solve(hmat, smat, eval):
+  ... setup
+  for 
+  call cusolverDnDsygvd
+
+*/
 
 __device__ void xtb_singlepoint(
     const structure_type &mol,
@@ -320,15 +368,14 @@ __device__ void xtb_singlepoint(
   }
 
   /* call timer%push("hamiltonian")
-   if (allocated(calc%ncoord)) then
-      allocate(cn(mol%nat))
-      if (grad) then
-         allocate(dcndr(3, mol%nat, mol%nat), dcndL(3, 3, mol%nat))
-      end if
-      call calc%ncoord%get_cn(mol, cn, dcndr, dcndL)
-   end if
-  */
-  ncoord_get_cn(calc.ncoord, mol, cn, dcndr, dcndL);
+  if (allocated(calc%ncoord)) then
+  allocate(cn(mol%nat))
+  if (grad) then
+  allocate(dcndr(3, mol%nat, mol%nat), dcndL(3, 3, mol%nat))
+  end if
+    call calc%ncoord%get_cn(mol, cn, dcndr, dcndL)*/
+    ncoord_get_cn(calc.ncoord, mol, cn, dcndr, dcndL);
+  /*end if*/
 
   /* allocate(selfenergy(calc%bas%nsh), dsedcn(calc%bas%nsh))
    call get_selfenergy(calc%h0, mol%id, calc%bas%ish_at, calc%bas%nsh_id, cn=cn, &
