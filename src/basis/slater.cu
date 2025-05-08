@@ -110,107 +110,107 @@ pure subroutine slater_to_gauss_array(ng, n, l, zeta, alpha, coeff, norm, info)
 end subroutine slater_to_gauss_array
 */
 
-void slater_to_gauss(
-  const int ng, const int n, const int l, const float zeta, 
-  float (&alpha)[MAXG], 
-  float (&coeff)[MAXG],
-  const bool norm,
-  int &info
-)
-{
-  // Basic checks
-  if (n > 5 || n <= l) {
-    if (!(n == 6 && ng == 6)) {
-      info = 2;
-      return;
-    }
-  }
+// void slater_to_gauss(
+//   const int ng, const int n, const int l, const float zeta, 
+//   float (&alpha)[MAXG], 
+//   float (&coeff)[MAXG],
+//   const bool norm,
+//   int &info
+// )
+// {
+//   // Basic checks
+//   if (n > 5 || n <= l) {
+//     if (!(n == 6 && ng == 6)) {
+//       info = 2;
+//       return;
+//     }
+//   }
 
-  if (zeta <= 0.0f) {
-    info = 4;
-    return;
-  }
+//   if (zeta <= 0.0f) {
+//     info = 4;
+//     return;
+//   }
 
-  // Determine ityp based on n and l
-  int ityp;
-  switch (l) {
-    case 0: ityp = n; break;       // s
-    case 1: ityp = 4 + n; break;   // p
-    case 2: ityp = 7 + n; break;   // d
-    case 3: ityp = 9 + n; break;   // f
-    case 4: ityp = 10 + n; break;  // g
-    default:
-      info = 3;
-      return;
-  }
+//   // Determine ityp based on n and l
+//   int ityp;
+//   switch (l) {
+//     case 0: ityp = n; break;       // s
+//     case 1: ityp = 4 + n; break;   // p
+//     case 2: ityp = 7 + n; break;   // d
+//     case 3: ityp = 9 + n; break;   // f
+//     case 4: ityp = 10 + n; break;  // g
+//     default:
+//       info = 3;
+//       return;
+//   }
 
-  // Handle ng cases
-  switch (ng) {
-    default:
-      info = 1;
-      return;
-    case 1:
-      alpha[0] = pAlpha1[ityp] * zeta * zeta;
-      coeff[0] = 1.0f;
-      break;
-    case 2:
-      for (int i = 0; i < ng; ++i) {
-        alpha[i] = pAlpha2[i][ityp] * zeta * zeta;
-        coeff[i] = pCoeff2[i][ityp];
-      }
-      break;
-    case 3:
-      for (int i = 0; i < ng; ++i) {
-        alpha[i] = pAlpha3[i][ityp] * zeta * zeta;
-        coeff[i] = pCoeff3[i][ityp];
-      }
-      break;
-    case 4:
-      for (int i = 0; i < ng; ++i) {
-        alpha[i] = pAlpha4[i][ityp] * zeta * zeta;
-        coeff[i] = pCoeff4[i][ityp];
-      }
-      break;
-    case 5:
-      for (int i = 0; i < ng; ++i) {
-        alpha[i] = pAlpha5[i][ityp] * zeta * zeta;
-        coeff[i] = pCoeff5[i][ityp];
-      }
-      break;
-    case 6:
-      if (n == 6) {
-        if (l == 0) {
-          for (int i = 0; i < ng; ++i) {
-            alpha[i] = pAlpha6s[i] * zeta * zeta;
-            coeff[i] = pCoeff6s[i];
-          }
-        } else if (l == 1) {
-          for (int i = 0; i < ng; ++i) {
-            alpha[i] = pAlpha6p[i] * zeta * zeta;
-            coeff[i] = pCoeff6p[i];
-          }
-        } else {
-          info = 2;
-          return;
-        }
-      } else {
-        for (int i = 0; i < ng; ++i) {
-          alpha[i] = pAlpha6[i][ityp] * zeta * zeta;
-          coeff[i] = pCoeff6[i][ityp];
-        }
-      }
-      break;
-  }
+//   // Handle ng cases
+//   switch (ng) {
+//     default:
+//       info = 1;
+//       return;
+//     case 1:
+//       alpha[0] = pAlpha1[ityp] * zeta * zeta;
+//       coeff[0] = 1.0f;
+//       break;
+//     case 2:
+//       for (int i = 0; i < ng; ++i) {
+//         alpha[i] = pAlpha2[i][ityp] * zeta * zeta;
+//         coeff[i] = pCoeff2[i][ityp];
+//       }
+//       break;
+//     case 3:
+//       for (int i = 0; i < ng; ++i) {
+//         alpha[i] = pAlpha3[i][ityp] * zeta * zeta;
+//         coeff[i] = pCoeff3[i][ityp];
+//       }
+//       break;
+//     case 4:
+//       for (int i = 0; i < ng; ++i) {
+//         alpha[i] = pAlpha4[i][ityp] * zeta * zeta;
+//         coeff[i] = pCoeff4[i][ityp];
+//       }
+//       break;
+//     case 5:
+//       for (int i = 0; i < ng; ++i) {
+//         alpha[i] = pAlpha5[i][ityp] * zeta * zeta;
+//         coeff[i] = pCoeff5[i][ityp];
+//       }
+//       break;
+//     case 6:
+//       if (n == 6) {
+//         if (l == 0) {
+//           for (int i = 0; i < ng; ++i) {
+//             alpha[i] = pAlpha6s[i] * zeta * zeta;
+//             coeff[i] = pCoeff6s[i];
+//           }
+//         } else if (l == 1) {
+//           for (int i = 0; i < ng; ++i) {
+//             alpha[i] = pAlpha6p[i] * zeta * zeta;
+//             coeff[i] = pCoeff6p[i];
+//           }
+//         } else {
+//           info = 2;
+//           return;
+//         }
+//       } else {
+//         for (int i = 0; i < ng; ++i) {
+//           alpha[i] = pAlpha6[i][ityp] * zeta * zeta;
+//           coeff[i] = pCoeff6[i][ityp];
+//         }
+//       }
+//       break;
+//   }
 
-  // Normalize if requested
-  if (norm) {
-    for (int i = 0; i < ng; ++i) {
-      coeff[i] *= powf(top * alpha[i], 0.75f) *
-                  powf(sqrtf(4 * alpha[i]), l) /
-                  sqrtf(dfactorial[l + 1]);
-    }
-  }
+//   // Normalize if requested
+//   if (norm) {
+//     for (int i = 0; i < ng; ++i) {
+//       coeff[i] *= powf(top * alpha[i], 0.75f) *
+//                   powf(sqrtf(4 * alpha[i]), l) /
+//                   sqrtf(dfactorial[l + 1]);
+//     }
+//   }
 
-  // Success
-  info = 0;
-}
+//   // Success
+//   info = 0;
+// }

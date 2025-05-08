@@ -39,7 +39,7 @@ int main()
     // test_sygvd();
     // test_blas();
     // test_xtb();
-    test_sygvd();
+    // test_sygvd();
 
     return 0;
 }

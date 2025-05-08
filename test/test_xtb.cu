@@ -80,26 +80,26 @@ end subroutine add_basis
 
 void add_basis(xtb_calculator &calc, structure_type &mol)
 {
-  int nsh_id[MAX_NELEM];
-  cgto_type cgto[MAX_NSH][MAX_NELEM];
+  // int nsh_id[MAX_NELEM];
+  // cgto_type cgto[MAX_NSH][MAX_NELEM];
 
-  for (int isp = 0; isp < mol.nid; isp++)
-  {
-    int izp = mol.num[isp];
-    nsh_id[isp] = nshell[izp];
+  // for (int isp = 0; isp < mol.nid; isp++)
+  // {
+  //   int izp = mol.num[isp];
+  //   nsh_id[isp] = nshell[izp];
 
-    for (int ish = 0; ish < nsh_id[isp]; ish++)
-    {
-      int ng = number_of_primitives[ish][izp];
-      cgto[ish][isp];
-      int stat = 0;
-      slater_to_gauss(ng, principal_quantum_number[ish][izp], ang_shell[ish][izp],
-                      slater_exponent[ish][izp], 
-                      cgto[ish][isp].alpha, cgto[ish][isp].coeff, 
-                      true, stat);
-      assert(stat != 0); // add basis failed
-    }
-  }
+  //   for (int ish = 0; ish < nsh_id[isp]; ish++)
+  //   {
+  //     int ng = number_of_primitives[ish][izp];
+  //     cgto[ish][isp];
+  //     int stat = 0;
+  //     slater_to_gauss(ng, principal_quantum_number[ish][izp], ang_shell[ish][izp],
+  //                     slater_exponent[ish][izp], 
+  //                     cgto[ish][isp].alpha, cgto[ish][isp].coeff, 
+  //                     true, stat);
+  //     assert(stat != 0); // add basis failed
+  //   }
+  // }
 
   // new_basis(calc.bas, mol, nsh_id, cgto, 1.0);
 }

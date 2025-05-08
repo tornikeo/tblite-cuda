@@ -15,16 +15,6 @@ subroutine updown_to_magnet_2(x)
 end subroutine updown_to_magnet_2
 */
 
-__device__
-void updown_to_magnet(
-  float (&x)[MAX_NSPIN][MAX_NSH]
-)
-{
-  if (MAX_NSPIN == 2) { // since fortran indices are reverse of c-indices
-    x[0][0] = x[0][0] + x[1][0];
-    x[1][0] = x[0][0] - 2.0f * x[1][0];
-  }
-}
 
 
 /*

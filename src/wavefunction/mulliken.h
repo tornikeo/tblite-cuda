@@ -24,17 +24,7 @@ subroutine get_mulliken_shell_charges(bas, smat, pmat, n0sh, qsh)
          do jao = 1, bas%nao
             pao = pao + pmat(jao, iao, spin) * smat(jao, iao)
          end do
-         qsh(bas%ao2sh(iao), spin) = qsh(bas%ao2sh(iao), spin) - pao
-      end do
-   end do
-
-   call updown_to_magnet(qsh)
-   qsh(:, 1) = qsh(:, 1) + n0sh
-
-end subroutine get_mulliken_shell_charges
-
-*/
-__device__
+         qsh(bas%ao2sh(iao),updown_to_magnet
 void get_mulliken_shell_charges(
   const basis_type &bas,
   const float (&smat)[MAX_NAO][MAX_NAO],
@@ -60,8 +50,10 @@ void get_mulliken_shell_charges(
 //   float (&mpat)[MAX_NSPIN][MAX_NAT][3]
 // );
 
-template <int Dim> /* Template functions need to be in the header to be used*/
-__device__         /* in other files */
+/* Template functions need to be in the header to be used*/
+/* in other files */
+template <int Dim> 
+__device__         
 void get_mulliken_atomic_multipoles(
   const basis_type &bas,
   const float (&mpmat)[MAX_NAO][MAX_NAO][Dim],

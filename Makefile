@@ -28,11 +28,15 @@ INC_FLAGS := $(addprefix -I,$(INC_DIRS))
 # The -MMD and -MP flags together generate Makefiles for us!
 # These files will have .d instead of .o as the output.
 CPPFLAGS := -G -g $(INC_FLAGS)  -MMD -MP -DCUDA_SEPARABLE_COMPILATION
-NVCCFLAGS := -Xcompiler -Wno-unused-variable
+# Add the CUDA library path and link the cusolver library
+CUDA_LIB := /home/tornikeo/micromamba/envs/pb/lib
+export LD_LIBRARY_PATH := $(CUDA_LIB):$(LD_LIBRARY_PATH)
+LDFLAGS := -L$(CUDA_LIB) -lcusolver -lcublas
+NVCCFLAGS := -w -Xcompiler -Wno-unused-variable
 
 # Run all test executables
 test: $(TEST_BINS)
-	@for exe in $(TEST_BINS); do \
+	for exe in $(TEST_BINS); do \
 		echo "Running $$exe..."; \
 		./$$exe || exit 1; \
 	done
@@ -40,18 +44,16 @@ test: $(TEST_BINS)
 # Build each test executable from its corresponding test CUDA source file
 $(BUILD_DIR)/test/%.bin: ./test/%.cu
 	mkdir -p $(dir $@)
-	$(NVCC) $< -o $@ $(CPPFLAGS) $(NVCCFLAGS)
+	$(NVCC) $< -o $@ $(CPPFLAGS) $(NVCCFLAGS)  $(LDFLAGS)
 
 # The final build step.
 $(BUILD_DIR)/$(TARGET_EXEC): $(OBJS)
-	$(NVCC) $(OBJS) -o $@ $(CPPFLAGS) $(NVCCFLAGS)
+	$(NVCC) $(OBJS) -o $@ $(CPPFLAGS) $(NVCCFLAGS) $(LDFLAGS)
 
 # Build step for CUDA source
 $(BUILD_DIR)/%.cu.o: %.cu
 	mkdir -p $(dir $@)
 	$(NVCC) -c $< -o $@ $(CPPFLAGS) $(NVCCFLAGS)
-
-
 
 .PHONY: clean
 clean:
