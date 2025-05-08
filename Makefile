@@ -1,6 +1,6 @@
 # Thanks to Job Vranish (https://spin.atomicobject.com/2016/08/26/makefile-c-projects/)
 TARGET_EXEC := main.bin
-
+TEST_EXEC := test.bin
 NVCC := nvcc -ccbin=gcc -G -g -rdc=true -std=c++17
 BUILD_DIR := ./build
 SRC_DIRS := ./src
@@ -8,6 +8,9 @@ SRC_DIRS := ./src
 # Find all the C and C++ files we want to compile
 # Note the single quotes around the * expressions. The shell will incorrectly expand these otherwise, but we want to send the * directly to the find command.
 SRCS := $(shell find $(SRC_DIRS) -name '*.cu')
+
+TEST_SRCS := $(shell find ./test -name '*.cu')
+TEST_BINS := $(patsubst ./test/%.cu, $(BUILD_DIR)/test/%.bin, $(TEST_SRCS))
 
 # Prepends BUILD_DIR and appends .o to every src file
 # As an example, ./your_dir/hello.cpp turns into ./build/./your_dir/hello.cpp.o
@@ -26,6 +29,18 @@ INC_FLAGS := $(addprefix -I,$(INC_DIRS))
 # These files will have .d instead of .o as the output.
 CPPFLAGS := -G -g $(INC_FLAGS)  -MMD -MP -DCUDA_SEPARABLE_COMPILATION
 NVCCFLAGS := -Xcompiler -Wno-unused-variable
+
+# Run all test executables
+test: $(TEST_BINS)
+	@for exe in $(TEST_BINS); do \
+		echo "Running $$exe..."; \
+		./$$exe || exit 1; \
+	done
+
+# Build each test executable from its corresponding test CUDA source file
+$(BUILD_DIR)/test/%.bin: ./test/%.cu
+	mkdir -p $(dir $@)
+	$(NVCC) $< -o $@ $(CPPFLAGS) $(NVCCFLAGS)
 
 # The final build step.
 $(BUILD_DIR)/$(TARGET_EXEC): $(OBJS)

@@ -242,8 +242,8 @@ __device__ void xtb_singlepoint(
     float energy,
     float (&gradient)[MAX_NAT][3],
     float (&sigma)[3][3],
-    const int verbosity)
-{
+    const int verbosity
+) {
   bool grad, converged, econverged, pconverged;
   float econv, pconv, cutoff, elast, dpmom[3], qpmom[6], nel;
   int iscf;
